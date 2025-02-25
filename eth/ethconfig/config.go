@@ -21,7 +21,7 @@ import (
 	"errors"
 	"math/big"
 	"time"
-        "github.com/nucash-mining/go-altcoinchain/go-ethereum/consensus/ethash"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/beacon"
@@ -35,6 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/nucash-mining/go-altcoinchain/go-ethereum/consensus/ethash"
 )
 
 // FullNodeGPO contains default gasprice oracle settings for full node.
@@ -164,19 +165,19 @@ type Config struct {
 
 // CreateConsensusEngine creates a consensus engine for the given chain config.
 func CreateConsensusEngine(config *params.ChainConfig, db ethdb.Database) (consensus.Engine, error) {
-    // Clique is allowed for now to live standalone but ethash is forbidden and can
-    // only exist on already merged networks.
-    if config.Clique != nil {
-        return beacon.New(clique.New(config.Clique, db)), nil
-    }
-    // If defaulting to proof-of-work, enforce an already merged network since
-    // we cannot run PoW algorithms anymore, so we cannot even follow a chain
-    // not coordinated by a beacon node.
-    // Modified for custom chain ID 314156 to allow Ethash PoW
-    if config.ChainID.Cmp(big.NewInt(314156)) == 0 {
-        return ethash.New(), nil // Return real Ethash for PoW mining
-    } else if !config.TerminalTotalDifficultyPassed {
-        return nil, errors.New("ethash is only supported as a historical component of already merged networks")
-    }
-    return beacon.New(ethash.NewFaker()), nil
+	// Clique is allowed for now to live standalone but ethash is forbidden and can
+	// only exist on already merged networks.
+	if config.Clique != nil {
+		return beacon.New(clique.New(config.Clique, db)), nil
+	}
+	// If defaulting to proof-of-work, enforce an already merged network since
+	// we cannot run PoW algorithms anymore, so we cannot even follow a chain
+	// not coordinated by a beacon node.
+	// Modified for custom chain ID 314156 to allow Ethash PoW
+	if config.ChainID.Cmp(big.NewInt(314156)) == 0 {
+		return ethash.New(), nil // Return real Ethash for PoW mining
+	} else if !config.TerminalTotalDifficultyPassed {
+		return nil, errors.New("ethash is only supported as a historical component of already merged networks")
+	}
+	return beacon.New(ethash.NewFaker()), nil
 }
