@@ -48,12 +48,15 @@ geth attach /path/to/data/dir/geth.ipc```
 
 Add enodes 
 Connect some of these nodes from console
-###
+
+
+enodes that appear disconnected as of 2/26/25:
+(###
 admin.addPeer("enode://ddac68fb9a11af45c20c51a9b60b038565866123675594f9a527b566f8ef92c8e4ae177ff84b46caaf08bf872fff0de57853a6461bc393bf4cec120cff456114@62.72.177.111:31303")
 admin.addPeer("enode://72208ac95e8d7d73d6cfad1b24087b70fdcb66f23f0cd52a8dc0186d746268222d0ca74fdbaa862d41d946fc7997daf88a7558fcc74630a44d3df5fc3178e0ff@72.137.255.180:31303")
 admin.addPeer("enode://b256b5c4a1fb299b2c02da155aa02af9924245fb4a2e10bcbf7d7bd9b5f7ed639beff43202f13be9ff6cc4ebb71ba7f46235808d093379117477734c9b4d141b@62.72.177.111:31304")
 admin.addPeer("enode://a13205fbd19aa66cba508e52f7626ea551a9e34a6b2fdb2d7d9876f1cd1572ae5a5ef27ad7e59e9529e632872db6337ee6a7bb0755ad2e85f1a41fa2d49d0903@72.137.255.178:31303")
-###
+###)
 
 ## RPC Nodes
 In order to set up https RPC, look at this tutorial: https://www.nginx.com/resources/wiki/start/topics/recipes/geth/
