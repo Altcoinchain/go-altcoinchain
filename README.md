@@ -51,7 +51,8 @@ Connect some of these nodes from console
 
 enode currently online waiting for peers to sync with as pf 2/26/25:
 
-```enode://86bc0c13add4487c1e6ff2b3d25e88c6d52f096f838abcc8ca7ed1d105d9fbcd447a9915898ad41776a72702bdad5572d84cbb4fd0b724ebe22c2266b193b7d9@2600:1700:5250:1c60:8bc1:e4ce:5e8b:8a1b:31303```
+```admin.addPeer("enode://86bc0c13add4487c1e6ff2b3d25e88c6d52f096f838abcc8ca7ed1d105d9fbcd447a9915898ad41776a72702bdad5572d84cbb4fd0b724ebe22c2266b193b7d9@2600:1700:5250:1c60:8bc1:e4ce:5e8b:8a1b:31303")```
+```admin.addPeer("enode://3ef1a6a9af348f5be08462705f04435795c8b4cdec4294e416f6ab724ecc134ba7692976eeb2463e8ed3cd29b7cdb20ecc78882189d1c55d1f465cecfb1f2abc@23.245.133.56:30303")```
 
 
 enodes that appear disconnected as of 2/26/25:
