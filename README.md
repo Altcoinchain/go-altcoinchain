@@ -49,7 +49,12 @@ geth attach /path/to/data/dir/geth.ipc```
 Add enodes 
 Connect some of these nodes from console
 
-enode currently online waiting for peers to sync with as pf 2/26/25:
+enode currently online waiting for peers to sync with as pf 1/25/26:
+
+```admin.addPeer("enode://84f13980368dc684eaab5a5a2a70163ecbc415edb619a427d5a82cdb90baeed76d44c494f75734bebe96a881515e72735a530eddd0cc19a49b429897fa0d7869@99.248.100.186:32304")```
+```admin.addPeer("enode://f3c5e84f876d579ddbb26cb5cd523e7076aa262e7097f3b026b56ec7706f18abc6fb833f52aef0ea9300d30dd7ddcd45bb903738bece4b0ee9581ae1e368188d@62.72.177.111:31303")```
+```admin.addPeer("enode://fadcceca1e290110379b7d686f9c251fd6e82ab02bd18d72d6fbca7e14f0b2317063a52224e2c692e3ff39c61faeffbf8ef4ca25bafd0f8ef9447e9a86af0b84@99.248.100.186:31304")```
+```admin.addPeer("enode://360718774b66c472527eb4e30323c360c302b113ca5ca265531b5804504472ec05c247099dec08ed246d8dde9b5927001323b9fe808354647b8c8b292745d916@62.72.177.111:40305")```
 
 ```admin.addPeer("enode://86bc0c13add4487c1e6ff2b3d25e88c6d52f096f838abcc8ca7ed1d105d9fbcd447a9915898ad41776a72702bdad5572d84cbb4fd0b724ebe22c2266b193b7d9@2600:1700:5250:1c60:8bc1:e4ce:5e8b:8a1b:31303")```
 ```admin.addPeer("enode://3ef1a6a9af348f5be08462705f04435795c8b4cdec4294e416f6ab724ecc134ba7692976eeb2463e8ed3cd29b7cdb20ecc78882189d1c55d1f465cecfb1f2abc@23.245.133.56:30303")```
