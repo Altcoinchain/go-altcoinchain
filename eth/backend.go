@@ -546,6 +546,10 @@ func (s *Ethereum) Start() error {
 	}
 	// Start the networking layer and the light server if requested
 	s.handler.Start(maxPeers)
+
+	// Keep the hybrid engine's validator set in sync with the staking
+	// contract (no-op unless hybrid consensus is configured).
+	s.startHybridValidatorUpdater()
 	return nil
 }
 

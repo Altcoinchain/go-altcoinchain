@@ -115,9 +115,18 @@ func (api *ValidatorAPI) GetActiveValidators(ctx context.Context) ([]common.Addr
 		return nil, errors.New("hybrid consensus not active")
 	}
 
-	// In a full implementation, this would iterate through the staking contract
-	// to find all validators with stake >= minStake
-	// For now, return empty list as placeholder
+	// The hybrid engine's set is kept in sync with the staking contract by
+	// the validator updater loop.
+	if h := api.e.hybridEngine(); h != nil {
+		validators := h.GetValidators()
+		addrs := make([]common.Address, 0, len(validators))
+		for addr, info := range validators {
+			if info.Active {
+				addrs = append(addrs, addr)
+			}
+		}
+		return addrs, nil
+	}
 	return []common.Address{}, nil
 }
 
@@ -129,14 +138,18 @@ func (api *ValidatorAPI) GetNetworkStats(ctx context.Context) (*NetworkStats, er
 		return nil, errors.New("hybrid consensus not active")
 	}
 
-	return &NetworkStats{
-		TotalValidators:    0,
-		ActiveValidators:   0,
-		TotalStaked:        (*hexutil.Big)(big.NewInt(0)),
-		CurrentEpoch:       currentBlock.NumberU64() / 32, // 32 blocks per epoch
-		LastFinalizedBlock: 0, // Would come from hybrid consensus engine
-		PendingRewards:     (*hexutil.Big)(big.NewInt(0)),
-	}, nil
+	stats := &NetworkStats{
+		TotalStaked:    (*hexutil.Big)(big.NewInt(0)),
+		CurrentEpoch:   currentBlock.NumberU64() / 32, // 32 blocks per epoch
+		PendingRewards: (*hexutil.Big)(big.NewInt(0)),
+	}
+	if h := api.e.hybridEngine(); h != nil {
+		validators := h.GetValidators()
+		stats.TotalValidators = uint64(len(validators))
+		stats.ActiveValidators = uint64(h.GetActiveValidatorCount())
+		stats.TotalStaked = (*hexutil.Big)(h.GetTotalStake())
+	}
+	return stats, nil
 }
 
 // GetFinalityStatus returns the finality status of a block.
