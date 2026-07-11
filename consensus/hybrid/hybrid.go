@@ -36,6 +36,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
 )
 
@@ -243,8 +244,8 @@ func (h *Hybrid) Finalize(chain consensus.ChainHeaderReader, header *types.Heade
 		// Split reward among online validators
 		rewardPerValidator := new(big.Int).Div(validatorReward, big.NewInt(int64(len(onlineValidators))))
 
-		for _, validator := range onlineValidators {
-			// Add the reward to staking contract, earmarked for this validator
+		for range onlineValidators {
+			// Add the reward to staking contract, earmarked per online validator.
 			// The contract's distributeRewards function will handle distribution
 			statedb.AddBalance(stakingContract, rewardPerValidator)
 		}
@@ -277,11 +278,22 @@ func (h *Hybrid) Finalize(chain consensus.ChainHeaderReader, header *types.Heade
 
 // FinalizeAndAssemble runs any post-transaction state modifications and assembles the final block.
 func (h *Hybrid) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, statedb *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	// Finalize block
+	// Pre-fork blocks are pure ethash, rewards and assembly included.
+	if config := chain.Config(); config.Hybrid == nil || !config.IsHybrid(header.Number) {
+		return h.ethash.FinalizeAndAssemble(chain, header, statedb, txs, uncles, receipts)
+	}
+	// Hybrid mode: Finalize pays the split rewards and sets the state root.
+	// Assemble directly — delegating to ethash.FinalizeAndAssemble would run
+	// ethash.Finalize a second time and pay classic rewards on top, making
+	// locally mined blocks fail state-root validation on import.
 	h.Finalize(chain, header, statedb, txs, uncles)
+	return types.NewBlock(header, txs, uncles, receipts, trie.NewStackTrie(nil)), nil
+}
 
-	// Assemble and return the final block
-	return h.ethash.FinalizeAndAssemble(chain, header, statedb, txs, uncles, receipts)
+// SetThreads updates the mining threads on the wrapped ethash engine, keeping
+// the miner's threaded-interface dispatch working through beacon -> hybrid -> ethash.
+func (h *Hybrid) SetThreads(threads int) {
+	h.ethash.SetThreads(threads)
 }
 
 // Seal generates a new sealing request for the given input block.

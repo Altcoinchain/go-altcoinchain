@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/beacon"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/hybrid"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -234,7 +235,7 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		case ethash.ModeShared:
 			log.Warn("Ethash used in shared mode")
 		}
-		engine = ethash.New(ethash.Config{
+		ethashConfig := ethash.Config{
 			PowMode:          config.PowMode,
 			CacheDir:         stack.ResolvePath(config.CacheDir),
 			CachesInMem:      config.CachesInMem,
@@ -245,8 +246,28 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 			DatasetsOnDisk:   config.DatasetsOnDisk,
 			DatasetsLockMmap: config.DatasetsLockMmap,
 			NotifyFull:       config.NotifyFull,
-		}, notify, noverify)
-		engine.(*ethash.Ethash).SetThreads(-1) // Disable CPU mining
+		}
+		if chainConfig.HybridBlock != nil && chainConfig.Hybrid != nil {
+			// Hybrid PoW/PoS is scheduled: run the hybrid engine. It applies
+			// pure ethash rules before HybridBlock and the split-reward hybrid
+			// rules after, so it is safe to run from genesis.
+			hybridConfig := &hybrid.Config{
+				Period:                 chainConfig.Hybrid.Period,
+				FinalityThreshold:      chainConfig.Hybrid.FinalityThreshold,
+				AttestationWindow:      chainConfig.Hybrid.AttestationWindow,
+				StakingContract:        chainConfig.Hybrid.StakingContract,
+				MinStake:               (*big.Int)(chainConfig.Hybrid.MinStake),
+				MinerRewardPercent:     chainConfig.Hybrid.MinerRewardPercent,
+				ValidatorRewardPercent: chainConfig.Hybrid.ValidatorRewardPercent,
+			}
+			log.Info("Hybrid PoW/PoS consensus scheduled", "block", chainConfig.HybridBlock, "stakingContract", hybridConfig.StakingContract)
+			hybridEngine := hybrid.New(hybridConfig, ethashConfig, notify, noverify)
+			hybridEngine.SetThreads(-1) // Disable CPU mining
+			engine = hybridEngine
+		} else {
+			engine = ethash.New(ethashConfig, notify, noverify)
+			engine.(*ethash.Ethash).SetThreads(-1) // Disable CPU mining
+		}
 	}
 	return beacon.New(engine)
 }
