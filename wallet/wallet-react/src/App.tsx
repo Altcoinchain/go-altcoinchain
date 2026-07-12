@@ -18,8 +18,11 @@ import './index.css';
 
 // Constants
 const CHAIN_ID = 2330;
-const RPC_URL = 'http://127.0.0.1:8332';
-const STAKING_CONTRACT = '0x87f0bd245507e5a94cdb03472501a9f522a9e0f1';
+// Public Altcoinchain RPC (Cloudflare tunnel to the node; read-safe method filter).
+// Overridable at runtime via window.__ALT_RPC__.
+const RPC_URL = (typeof window !== 'undefined' && (window as any).__ALT_RPC__) || 'https://rpc.wattxchange.app';
+// ValidatorStaking v2 (32 ALT minimum, authenticated attest()), deployed 2026-07-12.
+const STAKING_CONTRACT = '0x347F496c887a92ed9706ff3EDF4f0b822Ab00d3E';
 const MIN_STAKE = 32;
 const TOKENS_STORAGE_KEY = 'altcoinchain_tokens';
 const NFTS_STORAGE_KEY = 'altcoinchain_nfts';
