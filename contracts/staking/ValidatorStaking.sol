@@ -15,7 +15,7 @@ pragma solidity ^0.8.13;
  */
 contract ValidatorStaking {
     // ============ Constants ============
-    uint256 public constant MIN_VALIDATOR_STAKE = 1000 ether;  // 1000 ALT to run a validator
+    uint256 public constant MIN_VALIDATOR_STAKE = 32 ether;    // 32 ALT to run a validator
     uint256 public constant MIN_DELEGATION = 10 ether;         // 10 ALT minimum delegation
     uint256 public constant WITHDRAWAL_DELAY = 7 days;
     uint256 public constant MAX_COMMISSION = 50;               // Max 50% commission
@@ -92,7 +92,7 @@ contract ValidatorStaking {
      * @param commission Commission rate (0-50%)
      */
     function registerValidator(uint256 commission) external payable {
-        require(msg.value >= MIN_VALIDATOR_STAKE, "Minimum 1000 ALT required");
+        require(msg.value >= MIN_VALIDATOR_STAKE, "Minimum 32 ALT required");
         require(commission <= MAX_COMMISSION, "Commission too high");
         require(!validators[msg.sender].isActive, "Already a validator");
         require(!validators[msg.sender].isSlashed, "Previously slashed");
@@ -136,16 +136,15 @@ contract ValidatorStaking {
     }
 
     /**
-     * @notice Called by consensus layer when validator attests to a block
-     * @param validator Address of the attesting validator
-     * @dev Only callable by consensus (block.coinbase or system)
+     * @notice Attest liveness as a validator. Called periodically by the
+     *         validator's own node (signed transaction), which both proves
+     *         key possession and gossips the attestation via the txpool.
+     * @dev Replaces the unauthenticated recordAttestation(address), which let
+     *      anyone refresh any validator's liveness.
      */
-    function recordAttestation(address validator) external {
-        // In production, verify caller is consensus layer
-        require(validators[validator].isActive, "Not active validator");
-
-        validators[validator].lastActiveBlock = block.number;
-        emit ValidatorAttested(validator, block.number);
+    function attest() external onlyActiveValidator {
+        validators[msg.sender].lastActiveBlock = block.number;
+        emit ValidatorAttested(msg.sender, block.number);
     }
 
     /**

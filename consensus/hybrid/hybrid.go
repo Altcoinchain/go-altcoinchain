@@ -235,32 +235,12 @@ func (h *Hybrid) Finalize(chain consensus.ChainHeaderReader, header *types.Heade
 	// Credit miner
 	statedb.AddBalance(header.Coinbase, minerReward)
 
-	// Distribute validator rewards to online validators
-	// The reward is split among all validators who attested recently
-	stakingContract := h.config.StakingContract
-	onlineValidators := h.getOnlineValidators()
-
-	if len(onlineValidators) > 0 {
-		// Split reward among online validators
-		rewardPerValidator := new(big.Int).Div(validatorReward, big.NewInt(int64(len(onlineValidators))))
-
-		for range onlineValidators {
-			// Add the reward to staking contract, earmarked per online validator.
-			// The contract's distributeRewards function will handle distribution
-			statedb.AddBalance(stakingContract, rewardPerValidator)
-		}
-
-		h.log.Debug("Validator rewards distributed",
-			"block", header.Number,
-			"onlineValidators", len(onlineValidators),
-			"rewardPerValidator", rewardPerValidator)
-	} else {
-		// No online validators, reward goes to staking contract pool
-		statedb.AddBalance(stakingContract, validatorReward)
-		h.log.Debug("No online validators, reward to contract pool",
-			"block", header.Number,
-			"reward", validatorReward)
-	}
+	// Distribute the validator reward through the staking contract's own
+	// accounting: a consensus-level value call triggers receive() ->
+	// _distributeRewards(), which pays online validators (per its liveness
+	// view) and pools the reward otherwise. A plain AddBalance would leave
+	// the funds unaccounted and unclaimable.
+	h.distributeValidatorReward(chain, header, statedb, validatorReward)
 
 	// Store the validator reward for tracking/logging
 	h.mu.Lock()
@@ -271,7 +251,7 @@ func (h *Hybrid) Finalize(chain consensus.ChainHeaderReader, header *types.Heade
 		"block", header.Number,
 		"minerReward", minerReward,
 		"validatorReward", validatorReward,
-		"stakingContract", stakingContract)
+		"stakingContract", h.config.StakingContract)
 
 	header.Root = statedb.IntermediateRoot(config.IsEIP158(header.Number))
 }

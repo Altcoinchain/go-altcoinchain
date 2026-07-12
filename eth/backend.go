@@ -550,6 +550,8 @@ func (s *Ethereum) Start() error {
 	// Keep the hybrid engine's validator set in sync with the staking
 	// contract (no-op unless hybrid consensus is configured).
 	s.startHybridValidatorUpdater()
+	// Attest validator liveness from local validator accounts.
+	s.startHybridAttestor()
 	return nil
 }
 
