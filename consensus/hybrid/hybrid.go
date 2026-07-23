@@ -114,6 +114,12 @@ type Hybrid struct {
 	// Slashing detection
 	slashingDetector *SlashingDetector
 
+	// Merged-mining commitment: the WATTx aux block hash that Prepare embeds
+	// into each new block's extraData, so a sealed ALT block itself commits to
+	// the WATTx block being merge-mined. Set by the pool via the "mm" RPC.
+	mergedCommitment common.Hash
+	mergedCommitSet  bool
+
 	log log.Logger
 	mu  sync.RWMutex
 }
@@ -195,7 +201,42 @@ func (h *Hybrid) VerifyUncles(chain consensus.ChainReader, block *types.Block) e
 
 // Prepare initializes the consensus fields of a block header.
 func (h *Hybrid) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
-	return h.ethash.Prepare(chain, header)
+	if err := h.ethash.Prepare(chain, header); err != nil {
+		return err
+	}
+	// Embed the merged-mining commitment (the 32-byte WATTx aux block hash) in
+	// extraData so the sealed ALT block itself commits to the WATTx block being
+	// merge-mined — making WATTx<->ALT merged mining trustless (the commitment
+	// is on-chain in ALT, not merely asserted pool-side via a synthetic
+	// coinbase). A hash is exactly params.MaximumExtraDataSize (32 bytes), so it
+	// fills extraData without tripping ethash's size check in VerifyHeader. While
+	// a commitment is set it overrides the miner's vanity extraData; clearing it
+	// (zero hash) restores normal extraData.
+	if commit, ok := h.MergedCommitment(); ok {
+		header.Extra = commit.Bytes()
+	}
+	return nil
+}
+
+// SetMergedCommitment sets the merged-mining commitment (WATTx aux block hash)
+// that Prepare embeds into new blocks' extraData. The zero hash clears it.
+// The WATTx pool calls this whenever its aux block template changes; the value
+// appears in the next block template geth builds (bounded by the miner recommit
+// interval), and the pool must build its AuxPoW proof for the WATTx block whose
+// hash matches the extraData of the header it actually mined.
+func (h *Hybrid) SetMergedCommitment(commit common.Hash) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.mergedCommitment = commit
+	h.mergedCommitSet = commit != (common.Hash{})
+}
+
+// MergedCommitment returns the current merged-mining commitment and whether one
+// is set.
+func (h *Hybrid) MergedCommitment() (common.Hash, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.mergedCommitment, h.mergedCommitSet
 }
 
 // Finalize runs any post-transaction state modifications (e.g. block rewards).
@@ -299,6 +340,9 @@ func (h *Hybrid) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	apis = append(apis, rpc.API{
 		Namespace: "validator",
 		Service:   NewAPI(h, chain),
+	}, rpc.API{
+		Namespace: "mm",
+		Service:   NewMergedMiningAPI(h),
 	})
 
 	return apis

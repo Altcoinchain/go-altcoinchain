@@ -60,6 +60,33 @@ func (api *API) GetWork() ([4]string, error) {
 	}
 }
 
+// GetSealingHeader returns the FULL header of the block the miner is currently
+// sealing — the exact header whose seal hash GetWork() returns. Merged-mining
+// pools need it to recompute the seal hash and verify the parent block's
+// extraData commitment; eth_getBlockByNumber("pending") returns an incomplete
+// header (miner/stateRoot unset until sealing) and cannot be used.
+// Exposed as eth_getSealingHeader / ethash_getSealingHeader.
+func (api *API) GetSealingHeader() (*types.Header, error) {
+	if api.ethash.remote == nil {
+		return nil, errors.New("not supported")
+	}
+	var (
+		resCh = make(chan *types.Header, 1)
+		errc  = make(chan error, 1)
+	)
+	select {
+	case api.ethash.remote.fetchHeaderCh <- &sealHeaderWork{errc: errc, res: resCh}:
+	case <-api.ethash.remote.exitCh:
+		return nil, errEthashStopped
+	}
+	select {
+	case h := <-resCh:
+		return h, nil
+	case err := <-errc:
+		return nil, err
+	}
+}
+
 // SubmitWork can be used by external miner to submit their POW solution.
 // It returns an indication if the work was accepted.
 // Note either an invalid solution, a stale work a non-existent work will return false.

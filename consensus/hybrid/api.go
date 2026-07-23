@@ -217,6 +217,33 @@ func (api *API) GetValidatorStake(ctx context.Context, addr common.Address) (*bi
 	return info.Stake, nil
 }
 
+// MergedMiningAPI provides merged-mining RPC methods (namespace "mm") used by
+// the WATTx merged-mining pool to bind an ALT block to a WATTx aux block.
+type MergedMiningAPI struct {
+	hybrid *Hybrid
+}
+
+// NewMergedMiningAPI creates a new merged-mining API instance.
+func NewMergedMiningAPI(hybrid *Hybrid) *MergedMiningAPI {
+	return &MergedMiningAPI{hybrid: hybrid}
+}
+
+// SetCommitment sets the WATTx aux block hash embedded into each new ALT block's
+// extraData (RPC: mm_setCommitment). The pool calls this whenever its aux block
+// template changes; the value takes effect in the next block template geth
+// builds. Passing the zero hash clears it. Returns true on success.
+func (api *MergedMiningAPI) SetCommitment(ctx context.Context, commitment common.Hash) (bool, error) {
+	api.hybrid.SetMergedCommitment(commitment)
+	return true, nil
+}
+
+// GetCommitment returns the current merged-mining commitment (RPC:
+// mm_getCommitment), or the zero hash if none is set.
+func (api *MergedMiningAPI) GetCommitment(ctx context.Context) (common.Hash, error) {
+	commit, _ := api.hybrid.MergedCommitment()
+	return commit, nil
+}
+
 // IsFinalized returns whether a block number has been finalized.
 func (api *API) IsFinalized(ctx context.Context, blockNumber uint64) (bool, error) {
 	return api.hybrid.IsFinalized(blockNumber), nil

@@ -208,6 +208,7 @@ type remoteSealer struct {
 	results      chan<- *types.Block
 	workCh       chan *sealTask   // Notification channel to push new work and relative result channel to remote sealer
 	fetchWorkCh  chan *sealWork   // Channel used for remote sealer to fetch mining work
+	fetchHeaderCh chan *sealHeaderWork // Channel to fetch the full sealing header (merged mining)
 	submitWorkCh chan *mineResult // Channel used for remote sealer to submit their mining result
 	fetchRateCh  chan chan uint64 // Channel used to gather submitted hash rate for local or remote sealer.
 	submitRateCh chan *hashrate   // Channel used for remote sealer to submit their mining hashrate
@@ -245,6 +246,16 @@ type sealWork struct {
 	res  chan [4]string
 }
 
+// sealHeaderWork fetches the FULL header of the current sealing block for
+// trustless merged mining: the pool must recompute the seal hash from the
+// exact header the miner is solving and verify its extraData commitment.
+// eth_getBlockByNumber("pending") returns an incomplete header (miner,
+// stateRoot, etc. are unset until the block is sealed), so it can't be used.
+type sealHeaderWork struct {
+	errc chan error
+	res  chan *types.Header
+}
+
 func startRemoteSealer(ethash *Ethash, urls []string, noverify bool) *remoteSealer {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &remoteSealer{
@@ -257,6 +268,7 @@ func startRemoteSealer(ethash *Ethash, urls []string, noverify bool) *remoteSeal
 		rates:        make(map[common.Hash]hashrate),
 		workCh:       make(chan *sealTask),
 		fetchWorkCh:  make(chan *sealWork),
+		fetchHeaderCh: make(chan *sealHeaderWork),
 		submitWorkCh: make(chan *mineResult),
 		fetchRateCh:  make(chan chan uint64),
 		submitRateCh: make(chan *hashrate),
@@ -293,6 +305,14 @@ func (s *remoteSealer) loop() {
 				work.errc <- errNoMiningWork
 			} else {
 				work.res <- s.currentWork
+			}
+
+		case req := <-s.fetchHeaderCh:
+			// Return the FULL header of the current sealing block (merged mining).
+			if s.currentBlock == nil {
+				req.errc <- errNoMiningWork
+			} else {
+				req.res <- s.currentBlock.Header()
 			}
 
 		case result := <-s.submitWorkCh:
