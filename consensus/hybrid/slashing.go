@@ -30,6 +30,11 @@ type SlashableOffense struct {
 	Evidence      []byte // Encoded evidence (e.g., two conflicting attestations)
 	BlockNumber   uint64
 	DetectedBlock uint64
+	// First and Second are the two conflicting signed attestations that prove a
+	// double-sign. They are the payload an honest node submits to the staking
+	// contract's slashWithEvidence for on-chain, deterministic enforcement.
+	First  *Attestation
+	Second *Attestation
 }
 
 // SlashingDetector detects slashable offenses by validators.
@@ -82,20 +87,22 @@ func (sd *SlashingDetector) CheckAttestation(attestation *Attestation) *Slashabl
 	key := attestationKey(validator, blockNumber)
 
 	if existing, ok := sd.validatorAttestations.Get(key); ok {
-		existingHash := existing.(common.Hash)
+		prev := existing.(*Attestation)
 		// Double attestation check: same block number, different hash
-		if existingHash != blockHash {
+		if prev.BlockHash != blockHash {
 			offense := &SlashableOffense{
 				Validator:     validator,
 				Reason:        SlashDoubleAttestation,
 				BlockNumber:   blockNumber,
 				DetectedBlock: blockNumber,
+				First:         prev,
+				Second:        attestation,
 			}
 
 			sd.log.Warn("Double attestation detected",
 				"validator", validator.Hex(),
 				"blockNumber", blockNumber,
-				"hash1", existingHash.Hex(),
+				"hash1", prev.BlockHash.Hex(),
 				"hash2", blockHash.Hex(),
 			)
 
@@ -104,8 +111,9 @@ func (sd *SlashingDetector) CheckAttestation(attestation *Attestation) *Slashabl
 		}
 	}
 
-	// Store this attestation
-	sd.validatorAttestations.Add(key, blockHash)
+	// Store this full attestation (signature retained so a later conflicting
+	// attestation yields a complete, submittable evidence pair).
+	sd.validatorAttestations.Add(key, attestation)
 
 	// Check for surround voting (simplified check)
 	if offense := sd.checkSurroundVoting(attestation); offense != nil {
@@ -182,6 +190,18 @@ func (sd *SlashingDetector) GetPendingSlashes() []SlashableOffense {
 	result := make([]SlashableOffense, len(sd.pendingSlashes))
 	copy(result, sd.pendingSlashes)
 	return result
+}
+
+// DrainPendingSlashes returns and clears the engine's detected offenses. The
+// node-side slash submitter calls this and forwards each offense's evidence to
+// the staking contract's slashWithEvidence. This is off-consensus (a normal
+// transaction), so multiple nodes submitting the same evidence is harmless —
+// the contract's already-slashed guard makes duplicates revert.
+func (h *Hybrid) DrainPendingSlashes() []SlashableOffense {
+	if h.slashingDetector == nil {
+		return nil
+	}
+	return h.slashingDetector.DrainPendingSlashes()
 }
 
 // QueueOffense appends an offense to the pending queue. Exposed for the

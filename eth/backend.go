@@ -552,6 +552,8 @@ func (s *Ethereum) Start() error {
 	s.startHybridValidatorUpdater()
 	// Attest validator liveness from local validator accounts.
 	s.startHybridAttestor()
+	// Submit on-chain evidence for any detected double-sign offenses.
+	s.startHybridSlasher()
 	return nil
 }
 

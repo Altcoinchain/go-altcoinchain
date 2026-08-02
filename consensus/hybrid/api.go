@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -170,19 +171,18 @@ func (api *API) GetPendingSlashes(ctx context.Context) ([]SlashableOffense, erro
 	return api.hybrid.slashingDetector.GetPendingSlashes(), nil
 }
 
-// QueueSlash enqueues a double-attestation offense for the given validator so
-// the next block's Finalize enforces it on-chain. DEBUG/TEST ONLY: it bypasses
-// evidence verification and exists to exercise the enforcement wiring end to
-// end; real offenses come from CheckAttestation.
-func (api *API) QueueSlash(ctx context.Context, validator common.Address) error {
-	if api.hybrid.slashingDetector == nil {
-		return nil
+// SubmitAttestation feeds a raw, externally-signed attestation into the engine
+// exactly as if it had arrived over gossip. DEBUG/TEST ONLY: it is the injection
+// point used to reproduce a double-sign (submit two attestations for the same
+// height with different hashes) and observe automatic evidence-based slashing.
+func (api *API) SubmitAttestation(ctx context.Context, validator common.Address, blockNumber uint64, blockHash common.Hash, signature hexutil.Bytes) error {
+	att := &Attestation{
+		Validator:   validator,
+		BlockHash:   blockHash,
+		BlockNumber: blockNumber,
+		Signature:   signature,
 	}
-	api.hybrid.slashingDetector.QueueOffense(SlashableOffense{
-		Validator: validator,
-		Reason:    SlashDoubleAttestation,
-	})
-	return nil
+	return api.hybrid.AddAttestation(att)
 }
 
 // GetConfig returns the hybrid consensus configuration.
