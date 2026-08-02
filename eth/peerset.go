@@ -211,6 +211,21 @@ func (ps *peerSet) peersWithoutTransaction(hash common.Hash) []*ethPeer {
 	return list
 }
 
+// peersWithoutAttestation retrieves peers not yet known to hold a given
+// validator's attestation for a block, used for PoS finality gossip.
+func (ps *peerSet) peersWithoutAttestation(validator common.Address, blockHash common.Hash) []*ethPeer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*ethPeer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.KnowsAttestation(validator, blockHash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
 // len returns if the current number of `eth` peers in the set. Since the `snap`
 // peers are tied to the existence of an `eth` connection, that will always be a
 // subset of `eth`.

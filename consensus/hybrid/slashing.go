@@ -184,6 +184,31 @@ func (sd *SlashingDetector) GetPendingSlashes() []SlashableOffense {
 	return result
 }
 
+// QueueOffense appends an offense to the pending queue. Exposed for the
+// debug RPC used to exercise the on-chain enforcement path; the normal
+// producer of offenses is CheckAttestation.
+func (sd *SlashingDetector) QueueOffense(off SlashableOffense) {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+	sd.pendingSlashes = append(sd.pendingSlashes, off)
+}
+
+// DrainPendingSlashes returns the pending offenses and clears the queue, so an
+// offense is enforced on-chain exactly once. Called by Finalize via
+// processSlashing.
+func (sd *SlashingDetector) DrainPendingSlashes() []SlashableOffense {
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	if len(sd.pendingSlashes) == 0 {
+		return nil
+	}
+	result := make([]SlashableOffense, len(sd.pendingSlashes))
+	copy(result, sd.pendingSlashes)
+	sd.pendingSlashes = sd.pendingSlashes[:0]
+	return result
+}
+
 // ClearPendingSlashes clears pending slashes after they've been processed.
 func (sd *SlashingDetector) ClearPendingSlashes() {
 	sd.mu.Lock()

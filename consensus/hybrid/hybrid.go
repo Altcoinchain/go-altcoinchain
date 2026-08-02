@@ -52,12 +52,17 @@ var (
 	// ErrInsufficientStake is returned when validator has insufficient stake
 	ErrInsufficientStake = errors.New("insufficient stake")
 
-	// HybridBlockReward is the total block reward in hybrid mode (2 ALT)
-	HybridBlockReward = big.NewInt(2e18)
-	// HybridMinerReward is the PoW miner reward (1 ALT)
-	HybridMinerReward = big.NewInt(1e18)
-	// HybridValidatorReward is the PoS validator reward (1 ALT)
-	HybridValidatorReward = big.NewInt(1e18)
+	// Emission is retuned for 1-second blocks. The hybrid economics were designed
+	// for a 12s block: 2 ALT/block => 2 ALT / 12s. At 1s blocks we divide by 12 to
+	// hold the ALT/second emission rate flat: 2e18/12 = 166666666666666666 wei
+	// (~0.16667 ALT), split 50/50 between the PoW miner and the PoS validator.
+	//
+	// HybridBlockReward is the total block reward in hybrid mode (~0.16667 ALT @ 1s)
+	HybridBlockReward = big.NewInt(166666666666666666)
+	// HybridMinerReward is the PoW miner reward (~0.08333 ALT @ 1s)
+	HybridMinerReward = big.NewInt(83333333333333333)
+	// HybridValidatorReward is the PoS validator reward (~0.08333 ALT @ 1s)
+	HybridValidatorReward = big.NewInt(83333333333333333)
 )
 
 // Config contains the configuration parameters of the hybrid consensus engine.
@@ -282,6 +287,18 @@ func (h *Hybrid) Finalize(chain consensus.ChainHeaderReader, header *types.Heade
 	// view) and pools the reward otherwise. A plain AddBalance would leave
 	// the funds unaccounted and unclaimable.
 	h.distributeValidatorReward(chain, header, statedb, validatorReward)
+
+	// NOTE: on-chain slashing enforcement is intentionally NOT wired here.
+	// A live test proved that draining the node-local offense queue inside
+	// Finalize is unsound: Finalize runs speculatively many times during
+	// mining, so the offense is consumed by a candidate assembly that may be
+	// discarded (observed: the slash logged but never landed on the canonical
+	// chain), and importing nodes would compute a different slash set and
+	// reject the block. Slashing must instead be driven by evidence CARRIED IN
+	// THE BLOCK (the two conflicting signed attestations), verified and applied
+	// identically by every node — mirroring Ethereum's attester slashings. The
+	// enforcement primitive (slashValidator) is retained for that design.
+	_ = h.processSlashing // retained; see slashValidator / systemcall.go
 
 	// Store the validator reward for tracking/logging
 	h.mu.Lock()

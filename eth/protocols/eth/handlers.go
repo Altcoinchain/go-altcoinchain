@@ -485,6 +485,16 @@ func answerGetPooledTransactions(backend Backend, query GetPooledTransactionsPac
 	return hashes, txs
 }
 
+// handleAttestation processes an inbound PoS finality attestation broadcast.
+func handleAttestation(backend Backend, msg Decoder, peer *Peer) error {
+	var att AttestationPacket
+	if err := msg.Decode(&att); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}
+	peer.markAttestation(att.Validator, att.BlockHash)
+	return backend.Handle(peer, &att)
+}
+
 func handleTransactions(backend Backend, msg Decoder, peer *Peer) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if !backend.AcceptTxs() {

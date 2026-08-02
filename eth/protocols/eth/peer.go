@@ -24,6 +24,7 @@ import (
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -36,6 +37,10 @@ const (
 	// maxKnownBlocks is the maximum block hashes to keep in the known list
 	// before starting to randomly evict them.
 	maxKnownBlocks = 1024
+
+	// maxKnownAtts is the maximum PoS attestation keys to keep in the known
+	// list before starting to randomly evict them.
+	maxKnownAtts = 8192
 
 	// maxQueuedTxs is the maximum number of transactions to queue up before dropping
 	// older broadcasts.
@@ -84,6 +89,8 @@ type Peer struct {
 	txBroadcast chan []common.Hash // Channel used to queue transaction propagation requests
 	txAnnounce  chan []common.Hash // Channel used to queue transaction announcement requests
 
+	knownAtts *knownCache // Set of PoS attestation keys known to be known by this peer
+
 	reqDispatch chan *request  // Dispatch channel to send requests and track then until fulfilment
 	reqCancel   chan *cancel   // Dispatch channel to cancel pending requests and untrack them
 	resDispatch chan *response // Dispatch channel to fulfil pending requests and untrack them
@@ -102,6 +109,7 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool) *Pe
 		version:         version,
 		knownTxs:        newKnownCache(maxKnownTxs),
 		knownBlocks:     newKnownCache(maxKnownBlocks),
+		knownAtts:       newKnownCache(maxKnownAtts),
 		queuedBlocks:    make(chan *blockPropagation, maxQueuedBlocks),
 		queuedBlockAnns: make(chan *types.Block, maxQueuedBlockAnns),
 		txBroadcast:     make(chan []common.Hash),
@@ -178,6 +186,30 @@ func (p *Peer) markBlock(hash common.Hash) {
 func (p *Peer) markTransaction(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known transaction hash
 	p.knownTxs.Add(hash)
+}
+
+// attKey derives the dedup key for an attestation from the validator and the
+// attested block hash. One key per (validator, block) so re-broadcasts are
+// suppressed but an updated head still propagates.
+func attKey(validator common.Address, blockHash common.Hash) common.Hash {
+	return crypto.Keccak256Hash(validator.Bytes(), blockHash.Bytes())
+}
+
+// markAttestation marks an attestation as known to the peer.
+func (p *Peer) markAttestation(validator common.Address, blockHash common.Hash) {
+	p.knownAtts.Add(attKey(validator, blockHash))
+}
+
+// KnowsAttestation reports whether the peer is already known to have the
+// given attestation, so we can avoid echoing it back.
+func (p *Peer) KnowsAttestation(validator common.Address, blockHash common.Hash) bool {
+	return p.knownAtts.Contains(attKey(validator, blockHash))
+}
+
+// SendAttestation propagates a single PoS finality attestation to the peer.
+func (p *Peer) SendAttestation(att *AttestationPacket) error {
+	p.markAttestation(att.Validator, att.BlockHash)
+	return p2p.Send(p.rw, NewAttestationMsg, att)
 }
 
 // SendTransactions sends transactions to the peer and includes the hashes

@@ -24,7 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
 )
+
+// selSlash is the 4-byte selector of the staking contract's slash(address)
+// entry point, callable only by the systemCaller.
+var selSlash = crypto.Keccak256([]byte("slash(address)"))[:4]
 
 // systemCaller is the pseudo-account that funds the per-block validator
 // reward call into the staking contract. It mirrors geth's convention of
@@ -77,6 +82,71 @@ func (h *Hybrid) distributeValidatorReward(chain consensus.ChainHeaderReader, he
 		statedb.AddBalance(contract, reward)
 		h.log.Warn("Validator reward distribution call failed; reward parked on contract",
 			"block", header.Number, "err", err)
+	}
+}
+
+// slashValidator issues a consensus-level slash(address) call to the staking
+// contract as the systemCaller, applying the on-chain stake penalty for a
+// detected offense. Runs inside Finalize so it is part of the block's state
+// transition. A revert (already-slashed / not-a-validator / undeployed
+// contract) is logged and ignored — it must not halt block processing.
+//
+// CONSENSUS SAFETY: this is deterministic only if every node processing the
+// block slashes exactly the same validators. Today the trigger is each node's
+// locally gossiped offense view, which is NOT guaranteed identical across
+// nodes. Before multi-node mainnet use, the offense evidence (the two conflicting
+// signed attestations) must be carried IN the block so importers verify and
+// apply an identical slash set. See processSlashing.
+func (h *Hybrid) slashValidator(chain consensus.ChainHeaderReader, header *types.Header, statedb *state.StateDB, validator common.Address) {
+	contract := h.config.StakingContract
+	if contract == (common.Address{}) {
+		return
+	}
+	data := make([]byte, 0, 4+32)
+	data = append(data, selSlash...)
+	data = append(data, common.LeftPadBytes(validator.Bytes(), 32)...)
+
+	blockCtx := vm.BlockContext{
+		CanTransfer: func(db vm.StateDB, addr common.Address, amount *big.Int) bool {
+			return db.GetBalance(addr).Cmp(amount) >= 0
+		},
+		Transfer: func(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
+			db.SubBalance(sender, amount)
+			db.AddBalance(recipient, amount)
+		},
+		GetHash:     mkGetHashFn(chain, header),
+		Coinbase:    header.Coinbase,
+		GasLimit:    header.GasLimit,
+		BlockNumber: new(big.Int).Set(header.Number),
+		Time:        new(big.Int).SetUint64(header.Time),
+		Difficulty:  new(big.Int).Set(header.Difficulty),
+		BaseFee:     header.BaseFee,
+	}
+	evm := vm.NewEVM(blockCtx, vm.TxContext{Origin: systemCaller, GasPrice: new(big.Int)}, statedb, chain.Config(), vm.Config{})
+	if _, _, err := evm.Call(vm.AccountRef(systemCaller), contract, data, systemCallGas, new(big.Int)); err != nil {
+		h.log.Warn("Slash system call reverted", "validator", validator, "block", header.Number, "err", err)
+	} else {
+		h.log.Warn("Validator slashed on-chain", "validator", validator, "block", header.Number)
+	}
+}
+
+// processSlashing drains offenses detected since the last block and slashes each
+// offender on-chain. Deduped by the contract's own `require(!isSlashed)` guard,
+// so a repeat is a harmless revert. See the consensus-safety note on
+// slashValidator: the trigger set must become block-carried evidence before
+// multi-node mainnet deployment.
+func (h *Hybrid) processSlashing(chain consensus.ChainHeaderReader, header *types.Header, statedb *state.StateDB) {
+	if h.slashingDetector == nil {
+		return
+	}
+	offenses := h.slashingDetector.DrainPendingSlashes()
+	seen := make(map[common.Address]bool, len(offenses))
+	for _, off := range offenses {
+		if seen[off.Validator] {
+			continue
+		}
+		seen[off.Validator] = true
+		h.slashValidator(chain, header, statedb, off.Validator)
 	}
 }
 

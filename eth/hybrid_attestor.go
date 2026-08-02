@@ -108,13 +108,15 @@ func (s *Ethereum) attestOnce(h *hybrid.Hybrid, head *types.Block) {
 			log.Warn("Hybrid attest tx failed", "validator", account.Address, "err", err)
 			continue
 		}
-		// Feed the local finality tracker as well.
+		// Feed the local finality tracker and gossip the signed attestation to
+		// peers so remote nodes can aggregate stake toward finality.
 		att := hybrid.NewAttestation(account.Address, head.Hash(), head.NumberU64())
 		if sig, err := ks.SignHash(account, att.SigningHash().Bytes()); err == nil {
 			att.Signature = sig
 			if err := h.AddAttestation(att); err != nil {
 				log.Debug("Local attestation not recorded", "err", err)
 			}
+			s.handler.BroadcastAttestation(att)
 		}
 		log.Info("Hybrid liveness attested", "validator", account.Address, "block", head.NumberU64())
 	}

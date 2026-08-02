@@ -44,7 +44,9 @@ var ProtocolVersions = []uint{ETH67, ETH66}
 
 // protocolLengths are the number of implemented message corresponding to
 // different protocol versions.
-var protocolLengths = map[uint]uint64{ETH67: 17, ETH66: 17}
+// Length 18 (0x00..0x11) reserves message code 0x11 for NewAttestationMsg, the
+// Altcoinchain hybrid PoW/PoS finality-attestation gossip extension.
+var protocolLengths = map[uint]uint64{ETH67: 18, ETH66: 18}
 
 // maxMessageSize is the maximum cap on the size of a protocol message.
 const maxMessageSize = 10 * 1024 * 1024
@@ -65,6 +67,10 @@ const (
 	NewPooledTransactionHashesMsg = 0x08
 	GetPooledTransactionsMsg      = 0x09
 	PooledTransactionsMsg         = 0x0a
+
+	// NewAttestationMsg propagates a validator's signed PoS finality
+	// attestation to peers (Altcoinchain hybrid PoW/PoS extension).
+	NewAttestationMsg = 0x11
 )
 
 var (
@@ -372,3 +378,17 @@ func (*GetPooledTransactionsPacket) Kind() byte   { return GetPooledTransactions
 
 func (*PooledTransactionsPacket) Name() string { return "PooledTransactions" }
 func (*PooledTransactionsPacket) Kind() byte   { return PooledTransactionsMsg }
+
+// AttestationPacket is the network packet carrying a single validator's signed
+// PoS finality attestation. Fields mirror consensus/hybrid.Attestation but are
+// kept as plain types here to avoid a protocol->consensus import cycle; the eth
+// handler converts between the two.
+type AttestationPacket struct {
+	Validator   common.Address
+	BlockHash   common.Hash
+	BlockNumber uint64
+	Signature   []byte
+}
+
+func (*AttestationPacket) Name() string { return "Attestation" }
+func (*AttestationPacket) Kind() byte   { return NewAttestationMsg }

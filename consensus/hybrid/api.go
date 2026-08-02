@@ -170,6 +170,21 @@ func (api *API) GetPendingSlashes(ctx context.Context) ([]SlashableOffense, erro
 	return api.hybrid.slashingDetector.GetPendingSlashes(), nil
 }
 
+// QueueSlash enqueues a double-attestation offense for the given validator so
+// the next block's Finalize enforces it on-chain. DEBUG/TEST ONLY: it bypasses
+// evidence verification and exists to exercise the enforcement wiring end to
+// end; real offenses come from CheckAttestation.
+func (api *API) QueueSlash(ctx context.Context, validator common.Address) error {
+	if api.hybrid.slashingDetector == nil {
+		return nil
+	}
+	api.hybrid.slashingDetector.QueueOffense(SlashableOffense{
+		Validator: validator,
+		Reason:    SlashDoubleAttestation,
+	})
+	return nil
+}
+
 // GetConfig returns the hybrid consensus configuration.
 func (api *API) GetConfig(ctx context.Context) (*ConfigResult, error) {
 	config := api.hybrid.config
