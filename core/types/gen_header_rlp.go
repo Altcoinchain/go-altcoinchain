@@ -51,6 +51,14 @@ func (obj *Header) EncodeRLP(_w io.Writer) error {
 			w.WriteBigInt(obj.BaseFee)
 		}
 	}
+	// EIP-7594 PeerDAS fields (optional, only present after FUSAKA)
+	_tmp2 := obj.ShardCount > 0
+	if _tmp2 {
+		w.WriteBytes(obj.DataRoot[:])
+		w.WriteBytes(obj.BlobHash[:])
+		w.WriteUint64(obj.ShardCount)
+		w.WriteUint64(obj.DataShardCount)
+	}
 	w.ListEnd(_tmp0)
 	return w.Flush()
 }

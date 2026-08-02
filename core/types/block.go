@@ -87,23 +87,26 @@ type Header struct {
 	// BaseFee was added by EIP-1559 and is ignored in legacy headers.
 	BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"`
 
-	/*
-		TODO (MariusVanDerWijden) Add this field once needed
-		// Random was added during the merge and contains the BeaconState randomness
-		Random common.Hash `json:"random" rlp:"optional"`
-	*/
+	// EIP-7594 PeerDAS fields added by the FUSAKA upgrade.
+	// These are only populated when the FUSAKA fork is active.
+	DataRoot       common.Hash `json:"dataRoot"       rlp:"optional"`
+	BlobHash       common.Hash `json:"blobHash"       rlp:"optional"`
+	ShardCount     uint64      `json:"shardCount"     rlp:"optional"`
+	DataShardCount uint64      `json:"dataShardCount" rlp:"optional"`
 }
 
 // field type overrides for gencodec
 type headerMarshaling struct {
-	Difficulty *hexutil.Big
-	Number     *hexutil.Big
-	GasLimit   hexutil.Uint64
-	GasUsed    hexutil.Uint64
-	Time       hexutil.Uint64
-	Extra      hexutil.Bytes
-	BaseFee    *hexutil.Big
-	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Difficulty     *hexutil.Big
+	Number         *hexutil.Big
+	GasLimit       hexutil.Uint64
+	GasUsed        hexutil.Uint64
+	Time           hexutil.Uint64
+	Extra          hexutil.Bytes
+	BaseFee        *hexutil.Big
+	ShardCount     hexutil.Uint64
+	DataShardCount hexutil.Uint64
+	Hash           common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -310,6 +313,13 @@ func (b *Block) BaseFee() *big.Int {
 	}
 	return new(big.Int).Set(b.header.BaseFee)
 }
+
+// EIP-7594 PeerDAS accessors
+func (b *Block) DataRoot() common.Hash       { return b.header.DataRoot }
+func (b *Block) BlobHash() common.Hash       { return b.header.BlobHash }
+func (b *Block) ShardCount() uint64          { return b.header.ShardCount }
+func (b *Block) DataShardCount() uint64      { return b.header.DataShardCount }
+func (h *Header) HasPeerDAS() bool           { return h.ShardCount > 0 }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
