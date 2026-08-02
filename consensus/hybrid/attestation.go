@@ -64,12 +64,19 @@ func NewAttestation(validator common.Address, blockHash common.Hash, blockNumber
 }
 
 // SigningHash returns the hash that should be signed.
+// SigningHash is the 32-byte digest a validator signs. It is defined as
+//
+//	keccak256(abi.encodePacked(uint256(blockNumber), bytes32(blockHash)))
+//
+// i.e. the big-endian 32-byte block number followed by the 32-byte block hash.
+// This packed form is chosen so the exact same digest is trivially recomputable
+// inside the staking contract (Solidity `keccak256(abi.encodePacked(...))`),
+// letting on-chain equivocation-evidence slashing verify these signatures.
 func (a *Attestation) SigningHash() common.Hash {
-	data := &AttestationData{
-		BlockHash:   a.BlockHash,
-		BlockNumber: a.BlockNumber,
-	}
-	return data.Hash()
+	var buf [64]byte
+	new(big.Int).SetUint64(a.BlockNumber).FillBytes(buf[0:32])
+	copy(buf[32:64], a.BlockHash[:])
+	return crypto.Keccak256Hash(buf[:])
 }
 
 // Sign signs the attestation with the given private key.

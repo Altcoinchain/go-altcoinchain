@@ -129,6 +129,7 @@ contract ValidatorStakingV3 {
     event RewardsClaimed(address indexed account, address indexed validator, uint256 amount);
     event RewardsDistributed(uint256 amount, uint256 onlineStake);
     event ValidatorSlashed(address indexed validator, uint256 penalty);
+    event EquivocationSlashed(address indexed validator, address indexed submitter, uint256 blockNumber);
     event ValidatorAttested(address indexed validator, uint256 blockNumber);
 
     // ============ Modifiers ============
@@ -455,6 +456,54 @@ contract ValidatorStakingV3 {
     /// them pro-rata. v2 desynced totalDelegated from individual balances and
     /// stranded the last delegator behind an underflow.
     function slash(address validator) external onlySystem {
+        _applySlash(validator);
+    }
+
+    /// @notice Permissionless equivocation slashing via cryptographic evidence.
+    /// Anyone may submit two attestations the validator signed at the SAME block
+    /// number for DIFFERENT block hashes (a double-sign). Because valid evidence
+    /// requires the offender's own two signatures, this cannot be abused to slash
+    /// an honest validator — unlike a bare permissionless slash(). The signed
+    /// digest matches consensus/hybrid.Attestation.SigningHash:
+    ///   keccak256(abi.encodePacked(uint256 blockNumber, bytes32 blockHash)).
+    /// Deterministic and consensus-safe: the evidence rides in an ordinary
+    /// transaction, so every node applies the identical slash.
+    function slashWithEvidence(
+        address validator,
+        uint256 blockNumber,
+        bytes32 hashA,
+        bytes calldata sigA,
+        bytes32 hashB,
+        bytes calldata sigB
+    ) external {
+        require(hashA != hashB, "Not conflicting");
+        bytes32 digestA = keccak256(abi.encodePacked(blockNumber, hashA));
+        bytes32 digestB = keccak256(abi.encodePacked(blockNumber, hashB));
+        require(_recoverSigner(digestA, sigA) == validator, "sigA not validator");
+        require(_recoverSigner(digestB, sigB) == validator, "sigB not validator");
+
+        _applySlash(validator);
+        emit EquivocationSlashed(validator, msg.sender, blockNumber);
+    }
+
+    /// @dev recovers the signer of a 65-byte [r||s||v] signature over `digest`.
+    /// Accepts v as 0/1 (go-ethereum crypto.Sign) or 27/28.
+    function _recoverSigner(bytes32 digest, bytes calldata sig) internal pure returns (address) {
+        require(sig.length == 65, "bad sig length");
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        assembly {
+            r := calldataload(sig.offset)
+            s := calldataload(add(sig.offset, 32))
+            v := byte(0, calldataload(add(sig.offset, 64)))
+        }
+        if (v < 27) v += 27;
+        require(v == 27 || v == 28, "bad sig v");
+        return ecrecover(digest, v, r, s);
+    }
+
+    function _applySlash(address validator) internal {
         Validator storage v = validators[validator];
         require(!v.isSlashed, "Already slashed");
         // Deliberately NOT `require(isActive)`. A validator who unregisters or
