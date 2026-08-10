@@ -82,12 +82,12 @@ var (
 		LondonBlock:             big.NewInt(0),
 		ArrowGlacierBlock:       nil,
 		GrayGlacierBlock:        nil,
-		HybridBlock:             big.NewInt(7_000_000),
+		HybridBlock:             big.NewInt(7_200_000),
 		Hybrid: &HybridConfig{
-			Period:                 12,  // 12 second block time like Ethereum
+			Period:                 1,   // 1 second target; enforced by the hybrid difficulty retarget
 			FinalityThreshold:      67,
 			AttestationWindow:      32,
-			StakingContract:        common.HexToAddress("0x55C492DF28Ae84a9f08dCBA9a5F686C1618d0Dac"), // ValidatorStaking v3: audited, self-stake exit + system-only slash + moniker (deployed 2026-07-23)
+			StakingContract:        common.HexToAddress("0x2e05FfB10eF99e3c8B2BE1b752D7D3D45E6AC2a7"), // ValidatorStaking v3.1: v3 + slashWithEvidence/packed attestation digests (deployed 2026-08-09)
 			MinStake:               (*hexutil.Big)(hexutil.MustDecodeBig("0x1bc16d674ec800000")), // 32 ALT
 			MinerRewardPercent:     50,  // 50% to PoW miner (1 ALT)
 			ValidatorRewardPercent: 50,  // 50% to PoS validator (1 ALT)
