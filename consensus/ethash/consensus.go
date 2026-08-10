@@ -339,6 +339,8 @@ func (ethash *Ethash) CalcDifficulty(chain consensus.ChainHeaderReader, time uin
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
 	next := new(big.Int).Add(parent.Number, big1)
 	switch {
+	case config.IsHybrid(next):
+		return calcDifficultyHybrid(config, time, parent)
 	case config.IsEthPoWFork(next):
 		if config.EthPoWForkBlock != nil && big.NewInt(0).Add(config.EthPoWForkBlock, big.NewInt(2048)).Cmp(next) == 0 {
 			return params.ETHWStartDifficulty //Reset difficulty
@@ -529,6 +531,47 @@ func calcDifficultyHomestead(time uint64, parent *types.Header) *big.Int {
 		x.Add(x, y)
 	}
 	return x
+}
+
+// calcDifficultyHybrid is the difficulty adjustment algorithm for the hybrid
+// PoW/PoS fork, which targets ~1-second blocks. Header timestamps have whole-
+// second resolution and verifyHeader requires them to be strictly increasing,
+// so a 1s gap is the floor: a gap of 1 means the network is at or beyond the
+// target and difficulty drifts up, a gap of 2 holds, and longer gaps step down
+// proportionally (capped, and floored at params.MinimumDifficulty).
+//
+// At the fork block itself the parent difficulty — tuned by the pre-fork
+// algorithm for ~13s blocks — is stepped down 12x in one shot so the chain
+// accelerates immediately instead of walking down over thousands of blocks.
+func calcDifficultyHybrid(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
+	next := new(big.Int).Add(parent.Number, big1)
+	if config.HybridBlock != nil && next.Cmp(config.HybridBlock) == 0 {
+		stepped := new(big.Int).Div(parent.Difficulty, big.NewInt(12))
+		return math.BigMax(stepped, params.MinimumDifficulty)
+	}
+
+	// Defensive: CalcDifficulty is reachable outside verifyHeader (e.g. RPC),
+	// so clamp instead of underflowing if time <= parent.Time.
+	gap := uint64(1)
+	if time > parent.Time {
+		gap = time - parent.Time
+	}
+
+	adjust := new(big.Int).Div(parent.Difficulty, big.NewInt(1024))
+	diff := new(big.Int).Set(parent.Difficulty)
+	switch {
+	case gap <= 1:
+		diff.Add(diff, adjust)
+	case gap == 2:
+		// on target: hold
+	default:
+		late := gap - 2
+		if late > 99 {
+			late = 99
+		}
+		diff.Sub(diff, adjust.Mul(adjust, new(big.Int).SetUint64(late)))
+	}
+	return math.BigMax(diff, params.MinimumDifficulty)
 }
 
 // calcDifficultyFrontier is the difficulty adjustment algorithm. It returns the

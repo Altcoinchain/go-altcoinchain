@@ -60,8 +60,12 @@ contract EquivocationTest is Test {
         uint256 bn = 5000;
         bytes32 hA = keccak256("a");
         bytes32 hB = keccak256("b");
+        // The whistleblower bounty is paid with a value call, so the reporter
+        // must be able to receive ALT — use an EOA, not this test contract.
+        vm.startPrank(address(0xBEEF));
         staking.slashWithEvidence(val, bn, hA, _sig(PK, bn, hA), hB, _sig(PK, bn, hB));
         vm.expectRevert("Already slashed");
         staking.slashWithEvidence(val, bn, hA, _sig(PK, bn, hA), hB, _sig(PK, bn, hB));
+        vm.stopPrank();
     }
 }
