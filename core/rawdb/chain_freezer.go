@@ -70,14 +70,18 @@ func newChainFreezer(datadir string, namespace string, readonly bool, maxTableSi
 
 // Close closes the chain freezer instance and terminates the background thread.
 func (f *chainFreezer) Close() error {
-	err := f.Freezer.Close()
+	// Stop the freeze loop BEFORE closing the table files: if a freeze batch is
+	// in flight, letting Freezer.Close() run first makes the loop's Sync() hit
+	// closed handles (os.ErrInvalid, "invalid argument") and log.Crit the whole
+	// process — observed on any datadir whose freezer lags the chain head by
+	// more than the freeze threshold (e.g. one written by a stock 1.10.24 node).
 	select {
 	case <-f.quit:
 	default:
 		close(f.quit)
 	}
 	f.wg.Wait()
-	return err
+	return f.Freezer.Close()
 }
 
 // freeze is a background thread that periodically checks the blockchain for any
