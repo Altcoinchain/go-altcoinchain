@@ -461,6 +461,27 @@ func (h *Hybrid) GetAttestations(blockHash common.Hash) *BlockAttestations {
 	return nil
 }
 
+// FinalizedHeight returns the highest block number this engine considers final,
+// or 0 if nothing has been finalized yet.
+//
+// This satisfies the finality oracle that core/blockchain.go type-asserts for
+// when deciding whether a reorg may unwind a given block. Returning 0 (no
+// validators, no attestations, or pre-fork) leaves stock proof-of-work fork
+// choice untouched.
+//
+// NOTE: finality here is still derived from node-local attestation state, so
+// two nodes can briefly disagree on the height. That is safe for REFUSING a
+// reorg — the worst case is that one node rejects a chain another accepts and
+// needs operator attention — but it is NOT sufficient to make finality a
+// consensus rule. Doing that requires attestations carried in the block; see
+// HYBRID_FINALITY_ENFORCEMENT_DESIGN.md.
+func (h *Hybrid) FinalizedHeight() uint64 {
+	if h.finalityTracker == nil {
+		return 0
+	}
+	return h.finalityTracker.GetLastFinalizedBlock()
+}
+
 // IsFinalized returns whether a block has been finalized.
 func (h *Hybrid) IsFinalized(blockNumber uint64) bool {
 	return h.finalityTracker.IsFinalized(blockNumber)

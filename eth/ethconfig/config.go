@@ -85,6 +85,8 @@ var Defaults = Config{
 	TrieTimeout:             60 * time.Minute,
 	SnapshotCache:           102,
 	FilterLogCacheSize:      32,
+	ReorgLimit:              core.DefaultReorgLimit,
+	ReorgLimitGrace:         core.DefaultReorgLimitGrace,
 	Miner: miner.Config{
 		GasCeil:  30000000,
 		GasPrice: big.NewInt(params.GWei),
@@ -172,6 +174,14 @@ type Config struct {
 	TrieTimeout             time.Duration
 	SnapshotCache           int
 	Preimages               bool
+
+	// ReorgLimit is the deepest chain reorganisation this node accepts while at
+	// the tip (0 = unlimited, stock go-ethereum behaviour). Local policy, not a
+	// consensus rule — see core.CacheConfig.ReorgLimit.
+	ReorgLimit uint64
+	// ReorgLimitGrace bounds how stale the local head may be for ReorgLimit to
+	// apply, so a node that is merely catching up is never stranded by it.
+	ReorgLimitGrace time.Duration
 
 	// This is the number of blocks for which logs will be cached in the filter system.
 	FilterLogCacheSize int
