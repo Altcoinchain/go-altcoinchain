@@ -84,6 +84,45 @@ node would have refused to reconcile and logged an ERROR on the first attempt, s
 the split immediately instead of after the fact. That is the main practical benefit today —
 ahead of any attacker.
 
+## Rolling it out
+
+Nothing has been deployed. The build is at `build/bin/geth-reorgguard`; the running
+`geth-fusaka` / `geth` binaries were left untouched.
+
+Because this is local policy and not a consensus rule, it can go on **one node at a time**
+and needs no coordination with minethepla.
+
+```bash
+# 1. back up the binary currently in use
+cp ~/Documents/go-altcoinchain_FUSAKA/build/bin/geth-fusaka{,.pre-reorgguard.bak}
+
+# 2. stop the node (it holds the datadir lock)
+systemctl --user stop altcoinchain
+
+# 3. swap in the new build
+cp ~/Documents/go-altcoinchain_FUSAKA/build/bin/geth-reorgguard \
+   ~/Documents/go-altcoinchain_FUSAKA/build/bin/geth-fusaka
+
+# 4. add the flag to ExecStart in
+#    ~/.config/systemd/user/altcoinchain.service   e.g.  --reorg.limit 128
+systemctl --user daemon-reload && systemctl --user start altcoinchain
+
+# 5. confirm
+journalctl --user -u altcoinchain -n 50 | grep -i "hybrid\|reorg"
+```
+
+Rollback is the reverse: stop, restore the `.pre-reorgguard.bak` binary, start.
+
+**Two cautions specific to this setup:**
+
+- Restarting geth takes the only attesting validator (`0xe59bb48f…`) offline while it is
+  down, because `attest.sh` talks to the local node. The contract's `ACTIVITY_THRESHOLD` is
+  100 blocks — about 15 minutes pre-fork, but only ~100 seconds once `Period=1s` lands.
+  Do the swap **before** the fork, not after, and check the validator is back online
+  afterwards.
+- No genesis re-init is needed. This changes no chain rules, so the datadir is untouched
+  and the stored config (`hybridBlock: 7200000`) is unaffected.
+
 ## Known gaps
 
 **The header chain is not guarded.** `HeaderChain.Reorg` (`core/headerchain.go:136`) is a
