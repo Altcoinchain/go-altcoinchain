@@ -93,6 +93,16 @@ type Header struct {
 	BlobHash       common.Hash `json:"blobHash"       rlp:"optional"`
 	ShardCount     uint64      `json:"shardCount"     rlp:"optional"`
 	DataShardCount uint64      `json:"dataShardCount" rlp:"optional"`
+
+	// AttestationsHash commits to the validator attestations carried in this
+	// block's body, exactly as TxHash commits to its transactions. Zero before
+	// the finality fork, and RLP omits trailing zero-valued optional fields, so
+	// legacy header hashes and fork IDs are unchanged until activation.
+	//
+	// NOTE: setting this field forces every preceding optional field (BaseFee and
+	// the PeerDAS group) to be encoded as well, so it must be gated on a fork
+	// block and switch on at the same height for every node.
+	AttestationsHash common.Hash `json:"attestationsRoot" rlp:"optional"`
 }
 
 // field type overrides for gencodec
@@ -163,6 +173,10 @@ func (h *Header) EmptyReceipts() bool {
 type Body struct {
 	Transactions []*Transaction
 	Uncles       []*Header
+
+	// Attestations carried by this block, committed to by Header.AttestationsHash.
+	// Optional so pre-fork two-element bodies decode unchanged.
+	Attestations []*Attestation `rlp:"optional"`
 }
 
 // Block represents an entire block in the Ethereum blockchain.
@@ -324,7 +338,9 @@ func (h *Header) HasPeerDAS() bool           { return h.ShardCount > 0 }
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
+// Named fields: Body gained an optional Attestations field, and a positional
+// literal would silently break again the next time it grows.
+func (b *Block) Body() *Body { return &Body{Transactions: b.transactions, Uncles: b.uncles} }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previously cached value.
