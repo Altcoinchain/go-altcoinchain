@@ -84,6 +84,25 @@ node would have refused to reconcile and logged an ERROR on the first attempt, s
 the split immediately instead of after the fact. That is the main practical benefit today —
 ahead of any attacker.
 
+## Known gaps
+
+**The header chain is not guarded.** `HeaderChain.Reorg` (`core/headerchain.go:136`) is a
+separate path used during header-first/fast sync and does not route through
+`BlockChain.reorg`, so it is unprotected. This is acceptable for the nodes on this network
+today — they run `--syncmode full`, where chain adoption goes through
+`InsertChain → writeBlockAndSetHead → reorg` and is guarded — but a node doing fast sync
+could have its header chain deeply reorganised. Extending the guard into `HeaderChain.Reorg`
+is a sensible follow-up; it was left out here because header sync is delicate and the
+change wanted more review than one sitting.
+
+**Finality is still node-local.** Guard 1 reads the engine's finalized height, which today
+is computed from gossiped attestations held in memory. Two nodes can briefly disagree. That
+is safe for *refusing* a reorg (worst case a node stops and wants attention) but it is not
+enough to make finality a consensus rule.
+
+**Three validators, one attesting.** Guard 1 does nothing at all until attestations reach
+the 67% threshold. Right now they do not, so only the depth limit is doing any work.
+
 ## Verification
 
 `core/blockchain_reorgguard_test.go` — 7 tests covering: deep reorg refused, shallow reorg
