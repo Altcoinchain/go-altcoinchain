@@ -4,6 +4,7 @@
 package hybrid
 
 import (
+	"strconv"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -272,9 +273,26 @@ func (sd *SlashingDetector) SetOfflineThreshold(blocks uint64) {
 	sd.offlineThreshold = blocks
 }
 
-// attestationKey creates a unique key for a validator's attestation at a block.
+// attestationKey identifies one validator's attestation AT ONE HEIGHT.
+//
+// It previously built the suffix with string(rune(blockNumber)), which encodes
+// the number as a Unicode code point rather than as digits. Code points stop at
+// 0x10FFFF (1,114,111), so every real ALT height overflowed to the replacement
+// character U+FFFD and EVERY height collapsed onto the same key. Consequences,
+// both observed live on 2026-09-09 at heights 7,226,200 / 7,226,240:
+//
+//   - a validator's second attestation was compared against its first, the
+//     hashes differed (different blocks), and it was rejected as equivocation —
+//     so finality worked exactly once per validator and then stopped forever;
+//   - honest validators accrued bogus pendingSlashes. Those are harmless at the
+//     contract (slashWithEvidence binds blockNumber into both signed digests, so
+//     cross-height evidence recovers the wrong signer and reverts) but they do
+//     burn gas on doomed submissions.
+//
+// Decimal digits keep one key per (validator, height), which is what the
+// double-attestation check means by "same height, different hash".
 func attestationKey(validator common.Address, blockNumber uint64) string {
-	return validator.Hex() + "-" + string(rune(blockNumber))
+	return validator.Hex() + "-" + strconv.FormatUint(blockNumber, 10)
 }
 
 // PruneOldData removes old attestation data to save memory.
