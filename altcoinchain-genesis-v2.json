@@ -1,0 +1,38 @@
+{
+  "config": {
+    "chainId": 2330,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "berlinBlock": 0,
+    "londonBlock": 0,
+    "hybridBlock": 7000000,
+    "hybrid": {
+      "period": 12,
+      "finalityThreshold": 67,
+      "attestationWindow": 32,
+      "stakingContract": "0x87f0bd245507e5a94cdb03472501a9f522a9e0f1",
+      "minStake": "0x1bc16d674ec800000",
+      "minerRewardPercent": 50,
+      "validatorRewardPercent": 50
+    }
+  },
+  "alloc": {
+    "0xAcf4Ac8668C587Cc47e401925dDe5b806fa27e9a": {
+      "balance": "0x34F086F3B33B68400000"
+    }
+  },
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "difficulty": "0xE8D4A51000",
+  "extraData": "",
+  "gasLimit": "0x2fefd8",
+  "nonce": "0x0000000000000042",
+  "mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "timestamp": "0x00"
+}

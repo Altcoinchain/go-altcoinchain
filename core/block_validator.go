@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -99,13 +100,36 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
 		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
 	}
+	// FUSAKA: PeerDAS validation (if active)
+	// TODO: Add PeerDAS sample verification when full integration is implemented
+	// For now, this is a placeholder that ensures FUSAKA fork is recognized
+	if v.config.IsFusaka(header.Number) {
+		// PeerDAS validation will be added here when network protocol is integrated
+		// This ensures the fork activation is recognized during block validation
+	}
 	return nil
 }
 
 // CalcGasLimit computes the gas limit of the next block after parent. It aims
 // to keep the baseline gas close to the provided target, and increase it towards
 // the target if the baseline gas is lower.
+//
+// If FUSAKA is active and the desiredLimit is below the FUSAKA target,
+// the FUSAKA target (150M) will be used as the desired limit.
 func CalcGasLimit(parentGasLimit, desiredLimit uint64) uint64 {
+	return CalcGasLimitWithConfig(parentGasLimit, desiredLimit, nil, nil)
+}
+
+// CalcGasLimitWithConfig computes the gas limit with FUSAKA support.
+// If config and blockNumber are provided and FUSAKA is active, it will use
+// the FUSAKA target gas limit (150M) when the desiredLimit is below it.
+func CalcGasLimitWithConfig(parentGasLimit, desiredLimit uint64, config *params.ChainConfig, blockNumber *big.Int) uint64 {
+	// EIP-7935: If FUSAKA is active, use the higher target (150M) if desiredLimit is below it
+	if config != nil && blockNumber != nil && config.IsFusaka(blockNumber) {
+		if desiredLimit < params.TargetBlockGasLimitFUSAKA {
+			desiredLimit = params.TargetBlockGasLimitFUSAKA
+		}
+	}
 	delta := parentGasLimit/params.GasLimitBoundDivisor - 1
 	limit := parentGasLimit
 	if desiredLimit < params.MinGasLimit {

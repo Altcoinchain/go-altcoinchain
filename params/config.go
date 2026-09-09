@@ -22,9 +22,12 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"golang.org/x/crypto/sha3"
 )
+
 var ChainID = big.NewInt(2330)
+
 // Genesis hashes to enforce below configs on.
 var (
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
@@ -33,6 +36,8 @@ var (
 	RinkebyGenesisHash = common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
 	GoerliGenesisHash  = common.HexToHash("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a")
 	KilnGenesisHash    = common.HexToHash("0x51c7fe41be669f69c45c33a56982cbde405313342d9e2b00d7c91a7b284dd4f8")
+	// AltcoinchainGenesisHash is the genesis hash from the Altcoinchain network
+	AltcoinchainGenesisHash = common.HexToHash("0x04e12dc501c4f51306351345e0587ec8bee495a9780ce9234401a0aa512e299b")
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of
@@ -58,28 +63,37 @@ var (
 	MainnetTerminalTotalDifficulty, _ = new(big.Int).SetString("58_750_000_000_000_000_000_000", 0)
 
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
+	// Altcoinchain (chain ID 2330) has all EVM forks activated from genesis.
 	MainnetChainConfig = &ChainConfig{
 		ChainID:                 big.NewInt(2330), //2330
-		HomesteadBlock:          big.NewInt(1_150_000),
-		DAOForkBlock:            big.NewInt(1_920_000),
-		DAOForkSupport:          true,
-		EIP150Block:             big.NewInt(2_463_000),
-		EIP150Hash:              common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:             big.NewInt(2_675_000),
-		EIP158Block:             big.NewInt(2_675_000),
-		ByzantiumBlock:          big.NewInt(4_370_000),
-		ConstantinopleBlock:     big.NewInt(7_280_000),
-		PetersburgBlock:         big.NewInt(7_280_000),
-		IstanbulBlock:           big.NewInt(9_069_000),
-		MuirGlacierBlock:        big.NewInt(9_200_000),
-		BerlinBlock:             big.NewInt(12_244_000),
-		LondonBlock:             big.NewInt(12_965_000),
-		ArrowGlacierBlock:       big.NewInt(13_773_000),
-		GrayGlacierBlock:        big.NewInt(15_050_000),
-		EthPoWForkBlock:         big.NewInt(90_000),
-		EthPoWForkSupport:       true,
+		HomesteadBlock:          big.NewInt(0),
+		DAOForkBlock:            nil,
+		DAOForkSupport:          false,
+		EIP150Block:             big.NewInt(0),
+		EIP150Hash:              common.Hash{},
+		EIP155Block:             big.NewInt(0),
+		EIP158Block:             big.NewInt(0),
+		ByzantiumBlock:          big.NewInt(0),
+		ConstantinopleBlock:     big.NewInt(0),
+		PetersburgBlock:         big.NewInt(0),
+		IstanbulBlock:           big.NewInt(0),
+		MuirGlacierBlock:        nil,
+		BerlinBlock:             big.NewInt(0),
+		LondonBlock:             big.NewInt(0),
+		ArrowGlacierBlock:       nil,
+		GrayGlacierBlock:        nil,
+		HybridBlock:             big.NewInt(7_200_000),
+		Hybrid: &HybridConfig{
+			Period:                 1,   // 1 second target; enforced by the hybrid difficulty retarget
+			FinalityThreshold:      67,
+			AttestationWindow:      32,
+			StakingContract:        common.HexToAddress("0x2e05FfB10eF99e3c8B2BE1b752D7D3D45E6AC2a7"), // ValidatorStaking v3.1: v3 + slashWithEvidence/packed attestation digests (deployed 2026-08-09)
+			MinStake:               (*hexutil.Big)(hexutil.MustDecodeBig("0x1bc16d674ec800000")), // 32 ALT
+			MinerRewardPercent:     50,  // 50% to PoW miner (1 ALT)
+			ValidatorRewardPercent: 50,  // 50% to PoS validator (1 ALT)
+		},
 		ChainID_ALT:             big.NewInt(2330), //2330
-		TerminalTotalDifficulty: nil,               // 58_750_000_000_000_000_000_000
+		TerminalTotalDifficulty: nil,              // 58_750_000_000_000_000_000_000
 		Ethash:                  new(EthashConfig),
 	}
 
@@ -275,16 +289,16 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, false, big.NewInt(1337), nil, false, new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, nil, false, nil, false, nil, nil, big.NewInt(1337), nil, false, new(EthashConfig), nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, nil, nil, false, big.NewInt(1337), nil, false, nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, nil, nil, nil, false, nil, false, nil, nil, big.NewInt(1337), nil, false, nil, &CliqueConfig{Period: 0, Epoch: 30000}}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, false, big.NewInt(1), nil, false, new(EthashConfig), nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, nil, nil, false, nil, false, nil, nil, big.NewInt(1), nil, false, new(EthashConfig), nil}
 	TestRules       = TestChainConfig.Rules(new(big.Int), false)
 )
 
@@ -377,8 +391,13 @@ type ChainConfig struct {
 	MergeNetsplitBlock  *big.Int `json:"mergeNetsplitBlock,omitempty"`  // Virtual fork after The Merge to use as a network splitter
 	ShanghaiBlock       *big.Int `json:"shanghaiBlock,omitempty"`       // Shanghai switch block (nil = no fork, 0 = already on shanghai)
 	CancunBlock         *big.Int `json:"cancunBlock,omitempty"`         // Cancun switch block (nil = no fork, 0 = already on cancun)
+	FusakaBlock         *big.Int `json:"fusakaBlock,omitempty"`         // Fusaka switch block (nil = no fork, 0 = already on fusaka)
+	XeggeXForkBlock     *big.Int `json:"xeggexForkBlock,omitempty"`     // XeggeX recovery fork block (nil = no fork)
+	XeggeXForkSupport   bool     `json:"xeggexForkSupport,omitempty"`   // Whether to apply XeggeX fund recovery
 	EthPoWForkBlock     *big.Int `json:"ethPoWForkBlock,omitempty"`     //EthPoW hard-fork switch block (nil = no fork)
 	EthPoWForkSupport   bool     `json:"ethPoWForkSupport,omitempty"`   // Whether the nodes supports or opposes the EthPoW hard-fork
+	HybridBlock         *big.Int `json:"hybridBlock,omitempty"`         // Hybrid PoW/PoS switch block (nil = no fork)
+	Hybrid              *HybridConfig `json:"hybrid,omitempty"`              // Hybrid PoW/PoS consensus configuration
 	ChainID_ALT         *big.Int `json:"chainId_alt"`                   // chainId alt identifies the current chain after pos switch and is used for replay protection
 	// TerminalTotalDifficulty is the amount of total difficulty reached by
 	// the network that triggers the consensus upgrade.
@@ -411,6 +430,22 @@ type CliqueConfig struct {
 // String implements the stringer interface, returning the consensus engine details.
 func (c *CliqueConfig) String() string {
 	return "clique"
+}
+
+// HybridConfig is the consensus engine config for hybrid PoW/PoS consensus.
+type HybridConfig struct {
+	Period                 uint64         `json:"period"`                 // Minimum time between blocks (seconds)
+	FinalityThreshold      uint64         `json:"finalityThreshold"`      // Percentage of stake required for finality (e.g., 67)
+	AttestationWindow      uint64         `json:"attestationWindow"`      // Number of blocks to keep attestations
+	StakingContract        common.Address `json:"stakingContract"`        // Address of the staking contract
+	MinStake               *hexutil.Big   `json:"minStake"`               // Minimum stake required to be a validator (in wei)
+	MinerRewardPercent     uint64         `json:"minerRewardPercent"`     // Percentage of block reward for miners (e.g., 70)
+	ValidatorRewardPercent uint64         `json:"validatorRewardPercent"` // Percentage of block reward for validators (e.g., 30)
+}
+
+// String implements the stringer interface, returning the consensus engine details.
+func (c *HybridConfig) String() string {
+	return "hybrid"
 }
 
 // String implements the fmt.Stringer interface.
@@ -476,6 +511,9 @@ func (c *ChainConfig) String() string {
 	}
 	if c.CancunBlock != nil {
 		banner += fmt.Sprintf(" - Cancun:                      %-8v\n", c.CancunBlock)
+	}
+	if c.FusakaBlock != nil {
+		banner += fmt.Sprintf(" - Fusaka:                      %-8v\n", c.FusakaBlock)
 	}
 	if c.EthPoWForkBlock != nil {
 		banner += fmt.Sprintf(" - EthPoW:                      %-8v\n", c.EthPoWForkBlock)
@@ -591,6 +629,21 @@ func (c *ChainConfig) IsCancun(num *big.Int) bool {
 	return isForked(c.CancunBlock, num)
 }
 
+// IsFusaka returns whether num is either equal to the Fusaka fork block or greater.
+func (c *ChainConfig) IsFusaka(num *big.Int) bool {
+	return isForked(c.FusakaBlock, num)
+}
+
+// IsXeggeXFork returns whether num is either equal to the XeggeX fork block or greater.
+func (c *ChainConfig) IsXeggeXFork(num *big.Int) bool {
+	return isForked(c.XeggeXForkBlock, num)
+}
+
+// IsHybrid returns whether num is either equal to the Hybrid fork block or greater.
+func (c *ChainConfig) IsHybrid(num *big.Int) bool {
+	return isForked(c.HybridBlock, num)
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
@@ -619,6 +672,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 	}
 	var lastFork fork
 	for _, cur := range []fork{
+		{name: "ethPoWForkBlock", block: c.EthPoWForkBlock, optional: true},
 		{name: "homesteadBlock", block: c.HomesteadBlock},
 		{name: "daoForkBlock", block: c.DAOForkBlock, optional: true},
 		{name: "eip150Block", block: c.EIP150Block},
@@ -636,7 +690,9 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "mergeNetsplitBlock", block: c.MergeNetsplitBlock, optional: true},
 		{name: "shanghaiBlock", block: c.ShanghaiBlock, optional: true},
 		{name: "cancunBlock", block: c.CancunBlock, optional: true},
-		{name: "ethPoWForkBlock", block: c.EthPoWForkBlock, optional: true},
+		{name: "fusakaBlock", block: c.FusakaBlock, optional: true},
+		{name: "xeggexForkBlock", block: c.XeggeXForkBlock, optional: true},
+		{name: "hybridBlock", block: c.HybridBlock, optional: true},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -721,11 +777,23 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.CancunBlock, newcfg.CancunBlock, head) {
 		return newCompatError("Cancun fork block", c.CancunBlock, newcfg.CancunBlock)
 	}
+	if isForkIncompatible(c.FusakaBlock, newcfg.FusakaBlock, head) {
+		return newCompatError("Fusaka fork block", c.FusakaBlock, newcfg.FusakaBlock)
+	}
+	if isForkIncompatible(c.XeggeXForkBlock, newcfg.XeggeXForkBlock, head) {
+		return newCompatError("XeggeX fork block", c.XeggeXForkBlock, newcfg.XeggeXForkBlock)
+	}
+	if c.IsXeggeXFork(head) && c.XeggeXForkSupport != newcfg.XeggeXForkSupport {
+		return newCompatError("XeggeX fork support flag", c.XeggeXForkBlock, newcfg.XeggeXForkBlock)
+	}
 	if isForkIncompatible(c.EthPoWForkBlock, newcfg.EthPoWForkBlock, head) {
 		return newCompatError("EthPoW fork block", c.EthPoWForkBlock, newcfg.EthPoWForkBlock)
 	}
 	if c.IsEthPoWFork(head) && c.EthPoWForkSupport != newcfg.EthPoWForkSupport {
 		return newCompatError("EthPoW fork support flag", c.EthPoWForkBlock, newcfg.EthPoWForkBlock)
+	}
+	if isForkIncompatible(c.HybridBlock, newcfg.HybridBlock, head) {
+		return newCompatError("Hybrid fork block", c.HybridBlock, newcfg.HybridBlock)
 	}
 	return nil
 }
@@ -795,7 +863,8 @@ type Rules struct {
 	IsHomestead, IsEIP150, IsEIP155, IsEIP158               bool
 	IsByzantium, IsConstantinople, IsPetersburg, IsIstanbul bool
 	IsBerlin, IsLondon                                      bool
-	IsMerge, IsShanghai, isCancun, IsEthPoWFork             bool
+	IsMerge, IsShanghai, isCancun, IsFusaka, IsEthPoWFork   bool
+	IsHybrid                                                bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -819,7 +888,9 @@ func (c *ChainConfig) Rules(num *big.Int, isMerge bool) Rules {
 		IsMerge:          isMerge,
 		IsShanghai:       c.IsShanghai(num),
 		isCancun:         c.IsCancun(num),
+		IsFusaka:         c.IsFusaka(num),
 		IsEthPoWFork:     c.IsEthPoWFork(num),
+		IsHybrid:         c.IsHybrid(num),
 	}
 }
 

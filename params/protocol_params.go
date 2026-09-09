@@ -23,6 +23,14 @@ const (
 	MinGasLimit          uint64 = 5000               // Minimum the gas limit may ever be.
 	MaxGasLimit          uint64 = 0x7fffffffffffffff // Maximum the gas limit (2^63-1).
 	GenesisGasLimit      uint64 = 4712388            // Gas limit of the Genesis block.
+	
+	// EIP-7825: Transaction Gas Upper Limit
+	// Maximum gas per transaction (2^24 = 16,777,216)
+	MaxTransactionGasFUSAKA uint64 = 16777216 // 0x1000000
+
+	// EIP-7935: Set Default Gas Limit
+	// Target block gas limit for FUSAKA upgrade (~150M gas)
+	TargetBlockGasLimitFUSAKA uint64 = 150000000 // 0x23BE7890
 
 	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.

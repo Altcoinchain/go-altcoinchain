@@ -44,6 +44,21 @@ import (
 
 var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 
+// isValidAltcoinchainGenesisHash checks if a stored genesis hash is valid for Altcoinchain.
+// This allows for backward compatibility with the legacy genesis hash from older geth versions.
+func isValidAltcoinchainGenesisHash(stored, computed common.Hash) bool {
+	// If hashes match exactly, it's valid
+	if stored == computed {
+		return true
+	}
+	// Accept the legacy Altcoinchain genesis hash for backward compatibility
+	// The legacy hash was computed by an older version of geth with different state trie hashing
+	if stored == params.AltcoinchainGenesisHash {
+		return true
+	}
+	return false
+}
+
 // Genesis specifies the header fields, state of a genesis block. It also defines hard
 // fork switch-over blocks through the chain configuration.
 type Genesis struct {
@@ -289,7 +304,7 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 		}
 		// Ensure the stored genesis matches with the given one.
 		hash := genesis.ToBlock().Hash()
-		if hash != stored {
+		if !isValidAltcoinchainGenesisHash(stored, hash) {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
 		}
 		block, err := genesis.Commit(db)
@@ -302,7 +317,7 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 	// Check whether the genesis block is already written.
 	if genesis != nil {
 		hash := genesis.ToBlock().Hash()
-		if hash != stored {
+		if !isValidAltcoinchainGenesisHash(stored, hash) {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
 		}
 	}
@@ -347,6 +362,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return g.Config
 	case ghash == params.MainnetGenesisHash:
 		return params.MainnetChainConfig
+	case ghash == params.AltcoinchainGenesisHash:
+		return params.MainnetChainConfig // Altcoinchain uses MainnetChainConfig with ChainID 2330
 	case ghash == params.RopstenGenesisHash:
 		return params.RopstenChainConfig
 	case ghash == params.SepoliaGenesisHash:

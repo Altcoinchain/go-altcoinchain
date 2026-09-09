@@ -1,366 +1,389 @@
-## Go Altcoinchain
+# Go Altcoinchain
 
-Official Golang implementation of the Altcoinchain protocol.
+Official Golang implementation of the Altcoinchain protocol - a hybrid PoW/PoS blockchain.
 
-[![API Reference](
-https://camo.githubusercontent.com/915b7be44ada53c290eb157634330494ebe3e30a/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f676f6c616e672f6764646f3f7374617475732e737667
-)](https://pkg.go.dev/github.com/ethereum/go-ethereum?tab=doc)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ethereum/go-ethereum)](https://goreportcard.com/report/github.com/ethereum/go-ethereum)
-[![Travis](https://travis-ci.com/ethereum/go-ethereum.svg?branch=master)](https://travis-ci.com/ethereum/go-ethereum)
-[![Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/nthXNEv)
+## Network Information
 
-## Building the source
+| Parameter | Value |
+|-----------|-------|
+| **Chain ID** | 2330 |
+| **Network ID** | 2330 |
+| **P2P Port** | 31303 |
+| **RPC Port** | 8332 |
+| **WebSocket Port** | 8333 |
+| **Consensus** | Hybrid PoW/PoS (Ethash + Staking) |
+| **Hybrid fork** | Block 7,200,000 |
+| **Block Time** | ~1 second target (post-fork) |
+| **Block reward** | 0.166666666 ALT — split 1:1 between PoW miner and PoS validators |
+| **Staking contract** | `0x2e05FfB10eF99e3c8B2BE1b752D7D3D45E6AC2a7` (ValidatorStaking v3.1) |
+| **Explorer** | https://altscan.io |
+| **Ethstats** | https://alt-stat.outsidethebox.top |
 
-For prerequisites and detailed build instructions please read the Eth [Installation Instructions](https://geth.ethereum.org/docs/install-and-build/installing-geth).
+> **Running a node from before block 7,200,000?** A datadir initialised with a
+> pre-fork `genesis.json` has no `hybridBlock` in its stored chain config, so it
+> applies pure-ethash rules, rejects block 7,200,000 and stops there. Re-run
+> `geth --datadir <dir> init genesis.json` with the current genesis. This only
+> rewrites the config — your chain data is kept — and it must print
+> `hash=04e12d..2e299b`. If it prints anything else, stop: you have the wrong
+> genesis file and will build a separate chain.
 
-Building `geth` requires both a Go (version 1.16 or later) and a C compiler. You can install
-them using your favourite package manager. Once the dependencies are installed, run
+## Quick Start (Pre-built Binaries)
 
-```shell
-git clone https://github.com/Altcoinchain/go-altcoinchain.git
-cd go-altcoinchain
+### Linux
+
+```bash
+# Download latest release
+wget https://github.com/nucash-mining/go-altcoinchain_FUSAKA/releases/download/v1.1.2/altcoinchain-v1.1.2-linux-amd64.tar.gz
+
+# Extract
+tar -xzf altcoinchain-v1.1.2-linux-amd64.tar.gz
+cd altcoinchain-v1.1.2-linux-amd64
+
+# Make executable
+chmod +x geth bootnode clef
+
+# Initialize genesis (first time only)
+./geth --datadir ~/.altcoinchain init genesis.json
+
+# Start node
+./geth --datadir ~/.altcoinchain \
+  --networkid 2330 \
+  --port 31303 \
+  --http --http.addr 127.0.0.1 --http.port 8332 \
+  --http.api eth,net,web3,personal,miner,txpool,debug \
+  --http.corsdomain "*" \
+  --ws --ws.addr 127.0.0.1 --ws.port 8333 \
+  --ws.api eth,net,web3,personal,miner,txpool \
+  --ws.origins "*" \
+  --bootnodes "enode://9355a3870bb3c7882a51797c6633380359c827febdbd89c87c0ff72914b351caf1642e5326ba78532f249082aad7c08d524cd418514865a49f8a5bca200ecbba@154.12.237.243:30303,enode://926900ccd1e2f218ce0d3c31f731eb1af1be60049624db9a01fa73588157f3fb7fd04c5f0874ca7cc030ab79d836c1961c3ef67aefe09f352e8a7aba03d3cdbf@154.12.237.243:30304,enode://c2e73bd6232c73ab7887d92aa904413597638ebf935791ca197bdd7902560baa7a4e8a1235b6d10d121ffc4602373476e7daa7d20d326466a5ae423be6581707@99.248.100.186:31303" \
+  --ethstats=YourNodeName:alt@alt-stat.outsidethebox.top \
+  --syncmode snap \
+  --gcmode full \
+  --maxpeers 50 \
+  --cache 512
+```
+
+### Windows
+
+```powershell
+# Download and extract altcoinchain-v1.1.2-windows-amd64.zip
+# Open PowerShell in the extracted directory
+
+# Initialize genesis (first time only)
+.\geth.exe --datadir %USERPROFILE%\.altcoinchain init genesis.json
+
+# Start node
+.\geth.exe --datadir %USERPROFILE%\.altcoinchain --networkid 2330 --port 31303 --http --http.addr 127.0.0.1 --http.port 8332 --http.api eth,net,web3,personal,miner,txpool,debug --ws --ws.addr 127.0.0.1 --ws.port 8333 --ws.api eth,net,web3,personal,miner,txpool --bootnodes "enode://9355a3870bb3c7882a51797c6633380359c827febdbd89c87c0ff72914b351caf1642e5326ba78532f249082aad7c08d524cd418514865a49f8a5bca200ecbba@154.12.237.243:30303,enode://926900ccd1e2f218ce0d3c31f731eb1af1be60049624db9a01fa73588157f3fb7fd04c5f0874ca7cc030ab79d836c1961c3ef67aefe09f352e8a7aba03d3cdbf@154.12.237.243:30304,enode://c2e73bd6232c73ab7887d92aa904413597638ebf935791ca197bdd7902560baa7a4e8a1235b6d10d121ffc4602373476e7daa7d20d326466a5ae423be6581707@99.248.100.186:31303" --ethstats=YourNodeName:alt@alt-stat.outsidethebox.top --syncmode snap --maxpeers 50 --cache 512
+```
+
+## Report Your Node to Ethstats
+
+Add the `--ethstats` flag to report your node to the network stats page:
+
+```bash
+--ethstats=YourNodeName:alt@alt-stat.outsidethebox.top \
+```
+
+Your node will appear at: https://alt-stat.outsidethebox.top
+
+## Bootnodes
+
+Current active bootnodes:
+
+```
+enode://9355a3870bb3c7882a51797c6633380359c827febdbd89c87c0ff72914b351caf1642e5326ba78532f249082aad7c08d524cd418514865a49f8a5bca200ecbba@154.12.237.243:30303
+enode://926900ccd1e2f218ce0d3c31f731eb1af1be60049624db9a01fa73588157f3fb7fd04c5f0874ca7cc030ab79d836c1961c3ef67aefe09f352e8a7aba03d3cdbf@154.12.237.243:30304
+enode://c2e73bd6232c73ab7887d92aa904413597638ebf935791ca197bdd7902560baa7a4e8a1235b6d10d121ffc4602373476e7daa7d20d326466a5ae423be6581707@99.248.100.186:31303
+```
+
+## Building from Source
+
+### Prerequisites
+
+- Go 1.21 or later
+- C compiler (GCC)
+- Make
+
+### Build
+
+```bash
+# Clone repository
+git clone https://github.com/nucash-mining/go-altcoinchain_FUSAKA.git
+cd go-altcoinchain_FUSAKA
+
+# Build geth
 make geth
-sudo cp build/bin/geth /usr/local/bin/
-```
 
-or, to build the full suite of utilities:
-
-```shell
-cd go-altcoinchain
+# Or build all utilities
 make all
-sudo cp build/bin/geth /usr/local/bin/
 
+# Binary will be in build/bin/
+./build/bin/geth --version
 ```
 
-## Start ALT Altcoinchain
+## Create a Wallet
 
-create an account```
-geth account new --datadir /path/to/data/dir```
+```bash
+# Create new account
+./geth account new --datadir ~/.altcoinchain
 
-generate genesis ```
-geth -datadir /path/to/data/dir init /path/to/genesis.json```
-
-Start daemon for mining ```
-geth --mine --http --networkid 2330 --datadir /path/to/data/dir```
-
-Attach a console ```
-geth attach /path/to/data/dir/geth.ipc```
-
-Add enodes 
-Connect some of these nodes from console
-
-enode currently online waiting for peers to sync with as pf 1/25/26:
-
-```admin.addPeer("enode://84f13980368dc684eaab5a5a2a70163ecbc415edb619a427d5a82cdb90baeed76d44c494f75734bebe96a881515e72735a530eddd0cc19a49b429897fa0d7869@99.248.100.186:32304")```
-```admin.addPeer("enode://f3c5e84f876d579ddbb26cb5cd523e7076aa262e7097f3b026b56ec7706f18abc6fb833f52aef0ea9300d30dd7ddcd45bb903738bece4b0ee9581ae1e368188d@62.72.177.111:31303")```
-```admin.addPeer("enode://fadcceca1e290110379b7d686f9c251fd6e82ab02bd18d72d6fbca7e14f0b2317063a52224e2c692e3ff39c61faeffbf8ef4ca25bafd0f8ef9447e9a86af0b84@99.248.100.186:31304")```
-```admin.addPeer("enode://360718774b66c472527eb4e30323c360c302b113ca5ca265531b5804504472ec05c247099dec08ed246d8dde9b5927001323b9fe808354647b8c8b292745d916@62.72.177.111:40305")```
-
-```admin.addPeer("enode://86bc0c13add4487c1e6ff2b3d25e88c6d52f096f838abcc8ca7ed1d105d9fbcd447a9915898ad41776a72702bdad5572d84cbb4fd0b724ebe22c2266b193b7d9@2600:1700:5250:1c60:8bc1:e4ce:5e8b:8a1b:31303")```
-```admin.addPeer("enode://3ef1a6a9af348f5be08462705f04435795c8b4cdec4294e416f6ab724ecc134ba7692976eeb2463e8ed3cd29b7cdb20ecc78882189d1c55d1f465cecfb1f2abc@23.245.133.56:30303")```
-
-
-enodes that appear disconnected as of 2/26/25:
-
-```admin.addPeer("enode://ddac68fb9a11af45c20c51a9b60b038565866123675594f9a527b566f8ef92c8e4ae177ff84b46caaf08bf872fff0de57853a6461bc393bf4cec120cff456114@62.72.177.111:31303")```
-```admin.addPeer("enode://72208ac95e8d7d73d6cfad1b24087b70fdcb66f23f0cd52a8dc0186d746268222d0ca74fdbaa862d41d946fc7997daf88a7558fcc74630a44d3df5fc3178e0ff@72.137.255.180:31303")```
-```admin.addPeer("enode://b256b5c4a1fb299b2c02da155aa02af9924245fb4a2e10bcbf7d7bd9b5f7ed639beff43202f13be9ff6cc4ebb71ba7f46235808d093379117477734c9b4d141b@62.72.177.111:31304")```
-```admin.addPeer("enode://a13205fbd19aa66cba508e52f7626ea551a9e34a6b2fdb2d7d9876f1cd1572ae5a5ef27ad7e59e9529e632872db6337ee6a7bb0755ad2e85f1a41fa2d49d0903@72.137.255.178:31303")```
-
-
-## RPC Nodes
-In order to set up https RPC, look at this tutorial: https://www.nginx.com/resources/wiki/start/topics/recipes/geth/
-
-
-
-## Executables
-
-The go-ethereum project comes with several wrappers/executables found in the `cmd`
-directory.
-
-|    Command    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| :-----------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|  **`geth`**   | Our main Altcoinchain CLI client. It is the entry point into the Altcoinchain network (main-, test- or private net), capable of running as a full node (default), archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the Altcoinchain network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `geth --help` and the [CLI page](https://geth.ethereum.org/docs/interface/command-line-options) for command line options.          |
-|   `clef`    | Stand-alone signing tool, which can be used as a backend signer for `geth`.  |
-|   `devp2p`    | Utilities to interact with nodes on the networking layer, without running a full blockchain. |
-|   `abigen`    | Source code generator to convert Altcoinchain contract definitions into easy to use, compile-time type-safe Go packages. It operates on plain [Altcoinchain contract ABIs](https://docs.soliditylang.org/en/develop/abi-spec.html) with expanded functionality if the contract bytecode is also available. However, it also accepts Solidity source files, making development much more streamlined. Please see our [Native DApps](https://geth.ethereum.org/docs/dapp/native-bindings) page for details. |
-|  `bootnode`   | Stripped down version of our Altcoinchain client implementation that only takes part in the network node discovery protocol, but does not run any of the higher level application protocols. It can be used as a lightweight bootstrap node to aid in finding peers in private networks.                                                                                                                                                                                                                                                                 |
-|     `evm`     | Developer utility version of the EVM (Ethereum Virtual Machine) that is capable of running bytecode snippets within a configurable environment and execution mode. Its purpose is to allow isolated, fine-grained debugging of EVM opcodes (e.g. `evm --code 60ff60ff --debug run`).                                                                                                                                                                                                                                                                     |
-|   `rlpdump`   | Developer utility tool to convert binary RLP ([Recursive Length Prefix](https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp)) dumps (data encoding used by the Altcoinchain protocol both network as well as consensus wise) to user-friendlier hierarchical representation (e.g. `rlpdump --hex CE0183FFFFFFC4C304050583616263`).                                                                                                                                                                                                                                 |
-|   `puppeth`   | a CLI wizard that aids in creating a new Altcoinchain network.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-
-## Running `geth`
-
-Going through all the possible command line flags is out of scope here (please consult our
-[CLI Wiki page](https://geth.ethereum.org/docs/interface/command-line-options)),
-but we've enumerated a few common parameter combos to get you up to speed quickly
-on how you can run your own `geth` instance.
-
-### Hardware Requirements
-
-Minimum:
-
-* CPU with 2+ cores
-* 4GB RAM
-* 1GB free storage space to sync the Mainnet
-* 8 MBit/sec download Internet service
-
-Recommended:
-
-* Fast CPU with 4+ cores
-* 16GB+ RAM
-* High Performance SSD with at least 20GB free space
-* 25+ MBit/sec download Internet service
-
-### Full node on the main Altcoinchain network
-
-By far the most common scenario is people wanting to simply interact with the Altcoinchain
-network: create accounts; transfer funds; deploy and interact with contracts. For this
-particular use-case the user doesn't care about years-old historical data, so we can
-sync quickly to the current state of the network. To do so:
-
-```shell
-$ geth console
+# List accounts
+./geth account list --datadir ~/.altcoinchain
 ```
 
-This command will:
- * Start `geth` in snap sync mode (default, can be changed with the `--syncmode` flag),
-   causing it to download more data in exchange for avoiding processing the entire history
-   of the Altcoinchain network, which is very CPU intensive.
- * Start up `geth`'s built-in interactive [JavaScript console](https://geth.ethereum.org/docs/interface/javascript-console),
-   (via the trailing `console` subcommand) through which you can interact using [`web3` methods](https://github.com/ChainSafe/web3.js/blob/0.20.7/DOCUMENTATION.md) 
-   (note: the `web3` version bundled within `geth` is very old, and not up to date with official docs),
-   as well as `geth`'s own [management APIs](https://geth.ethereum.org/docs/rpc/server).
-   This tool is optional and if you leave it out you can always attach to an already running
-   `geth` instance with `geth attach`.
+## Attach Console
 
+```bash
+# Attach to running node
+./geth attach ~/.altcoinchain/geth.ipc
 
-
-### Configuration
-
-As an alternative to passing the numerous flags to the `geth` binary, you can also pass a
-configuration file via:
-
-```shell
-$ geth --config /path/to/your_config.toml
+# Useful console commands
+> eth.syncing          # Check sync status
+> eth.blockNumber      # Current block
+> admin.peers.length   # Connected peers
+> eth.getBalance(eth.accounts[0])  # Check balance
+> personal.unlockAccount(eth.accounts[0])  # Unlock for transactions
 ```
 
-To get an idea how the file should look like you can use the `dumpconfig` subcommand to
-export your existing configuration:
+## Mining
 
-```shell
-$ geth --your-favourite-flags dumpconfig
+### CPU Mining
+
+```bash
+# Start node with mining enabled
+./geth --datadir ~/.altcoinchain \
+  --networkid 2330 \
+  --mine \
+  --miner.threads=4 \
+  --miner.etherbase=YOUR_WALLET_ADDRESS \
+  --bootnodes "enode://9355a3870bb3c7882a51797c6633380359c827febdbd89c87c0ff72914b351caf1642e5326ba78532f249082aad7c08d524cd418514865a49f8a5bca200ecbba@154.12.237.243:30303,enode://926900ccd1e2f218ce0d3c31f731eb1af1be60049624db9a01fa73588157f3fb7fd04c5f0874ca7cc030ab79d836c1961c3ef67aefe09f352e8a7aba03d3cdbf@154.12.237.243:30304"
 ```
 
+### GPU Mining
 
-#### Docker quick start
+For GPU mining, use a compatible miner like lolMiner or TeamRedMiner:
 
-One of the quickest ways to get Altcoinchain up and running on your machine is by using
-Docker:
-
-```shell
-docker run -d --name altcoinchain-node -v /Users/alice/altcoinchain:/root \
-           -p 8545:8545 -p 30303:30303 \
-           altcoinchain/client-go
+```bash
+# Example with lolMiner
+./lolMiner --algo ETCHASH --pool stratum+tcp://YOUR_POOL:PORT --user YOUR_WALLET
 ```
 
-This will start `geth` in snap-sync mode with a DB memory allowance of 1GB just as the
-above command does.  It will also create a persistent volume in your home directory for
-saving your blockchain as well as map the default ports. There is also an `alpine` tag
-available for a slim version of the image.
+## Staking (PoS)
 
-Do not forget `--http.addr 0.0.0.0`, if you want to access RPC from other containers
-and/or hosts. By default, `geth` binds to the local interface and RPC endpoints are not
-accessible from the outside.
+Since block 7,200,000 every block pays **0.166666666 ALT, split 1:1**: half to the
+PoW miner, half to the online validator set in proportion to stake.
 
-### Programmatically interfacing `geth` nodes
+ValidatorStaking v3.1: `0x2e05FfB10eF99e3c8B2BE1b752D7D3D45E6AC2a7`
 
-As a developer, sooner rather than later you'll want to start interacting with `geth` and the
-Altcoinchain network via your own programs and not manually through the console. To aid
-this, `geth` has built-in support for a JSON-RPC based APIs ([standard APIs](https://ethereum.github.io/execution-apis/api-documentation/)
-and [`geth` specific APIs](https://geth.ethereum.org/docs/rpc/server)).
-These can be exposed via HTTP, WebSockets and IPC (UNIX sockets on UNIX based
-platforms, and named pipes on Windows).
+| Parameter | Value |
+|-----------|-------|
+| Minimum validator self-stake | **32 ALT** |
+| Minimum delegation | 10 ALT |
+| Liveness window (`ACTIVITY_THRESHOLD`) | **100 blocks** |
+| Unbonding delay | 7 days |
+| Maximum commission | 50% |
 
-The IPC interface is enabled by default and exposes all the APIs supported by `geth`,
-whereas the HTTP and WS interfaces need to manually be enabled and only expose a
-subset of APIs due to security reasons. These can be turned on/off and configured as
-you'd expect.
+### Register a validator
 
-HTTP based JSON-RPC API options:
-
-  * `--http` Enable the HTTP-RPC server
-  * `--http.addr` HTTP-RPC server listening interface (default: `localhost`)
-  * `--http.port` HTTP-RPC server listening port (default: `8545`)
-  * `--http.api` API's offered over the HTTP-RPC interface (default: `eth,net,web3`)
-  * `--http.corsdomain` Comma separated list of domains from which to accept cross origin requests (browser enforced)
-  * `--ws` Enable the WS-RPC server
-  * `--ws.addr` WS-RPC server listening interface (default: `localhost`)
-  * `--ws.port` WS-RPC server listening port (default: `8546`)
-  * `--ws.api` API's offered over the WS-RPC interface (default: `eth,net,web3`)
-  * `--ws.origins` Origins from which to accept websockets requests
-  * `--ipcdisable` Disable the IPC-RPC server
-  * `--ipcapi` API's offered over the IPC-RPC interface (default: `admin,debug,eth,miner,net,personal,txpool,web3`)
-  * `--ipcpath` Filename for IPC socket/pipe within the datadir (explicit paths escape it)
-
-You'll need to use your own programming environments' capabilities (libraries, tools, etc) to
-connect via HTTP, WS or IPC to a `geth` node configured with the above flags and you'll
-need to speak [JSON-RPC](https://www.jsonrpc.org/specification) on all transports. You
-can reuse the same connection for multiple requests!
-
-**Note: Please understand the security implications of opening up an HTTP/WS based
-transport before doing so! Hackers on the internet are actively trying to subvert
-Altcoinchain nodes with exposed APIs! Further, all browser tabs can access locally
-running web servers, so malicious web pages could try to subvert locally available
-APIs!**
-
-### Operating a private network
-
-Maintaining your own private network is more involved as a lot of configurations taken for
-granted in the official networks need to be manually set up.
-
-#### Defining the private genesis state
-
-First, you'll need to create the genesis state of your networks, which all nodes need to be
-aware of and agree upon. This consists of a small JSON file (e.g. call it `genesis.json`):
-
-```json
-{
-  "config": {
-    "chainId": <arbitrary positive integer>,
-    "homesteadBlock": 0,
-    "eip150Block": 0,
-    "eip155Block": 0,
-    "eip158Block": 0,
-    "byzantiumBlock": 0,
-    "constantinopleBlock": 0,
-    "petersburgBlock": 0,
-    "istanbulBlock": 0,
-    "berlinBlock": 0,
-    "londonBlock": 0
-  },
-  "alloc": {},
-  "coinbase": "0x0000000000000000000000000000000000000000",
-  "difficulty": "0x20000",
-  "extraData": "",
-  "gasLimit": "0x2fefd8",
-  "nonce": "0x0000000000000042",
-  "mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-  "timestamp": "0x00"
-}
+```bash
+# 32 ALT self-stake, 10% commission, moniker shown in the validator list
+cast send 0x2e05FfB10eF99e3c8B2BE1b752D7D3D45E6AC2a7 \
+  "registerValidator(uint256,string)" 10 "my-validator" \
+  --value 32ether --keystore <keystore> --rpc-url <rpc> --legacy
 ```
 
-The above fields should be fine for most purposes, although we'd recommend changing
-the `nonce` to some random value so you prevent unknown remote nodes from being able
-to connect to you. If you'd like to pre-fund some accounts for easier testing, create
-the accounts and populate the `alloc` field with their addresses.
+### Staying online — read this or you will earn nothing
 
-```json
-"alloc": {
-  "0x0000000000000000000000000000000000000001": {
-    "balance": "111111111"
-  },
-  "0x0000000000000000000000000000000000000002": {
-    "balance": "222222222"
-  }
-}
+`isValidatorOnline()` is true only while `block.number - lastActiveBlock <= 100`.
+**That window is measured in blocks, not time.** At the post-fork ~1s block target
+it is roughly **100 seconds**, not the ~20 minutes it was at 13s blocks. A
+validator that stops refreshing its liveness silently drops out of the online set
+and earns nothing, while still appearing registered and active.
+
+The node refreshes it for you. Run it with a validator key in the keystore and
+unlocked, and the built-in attestor sends `attest()` every 40 blocks:
+
+```bash
+geth --datadir ~/.altcoinchain \
+  --unlock 0xYOUR_VALIDATOR --password /path/to/password.txt \
+  --allow-insecure-unlock \
+  ...
 ```
 
-With the genesis state defined in the above JSON file, you'll need to initialize **every**
-`geth` node with it prior to starting it up to ensure all blockchain parameters are correctly
-set:
+`--allow-insecure-unlock` is required whenever HTTP RPC is enabled. Only use it on
+a node whose RPC is **not** reachable from the network — bind it to `127.0.0.1`, or
+publish it behind a proxy that rejects `eth_sendTransaction` and `personal_*`.
 
-```shell
-$ geth init path/to/genesis.json
+That same unlocked key is what produces **PoS attestations**, which drive finality.
+A node with no validator key in its keystore never attests, and a chain where
+nobody attests never finalizes — see Finality below.
+
+### Check your status
+
+```bash
+cast call 0x2e05FfB10eF99e3c8B2BE1b752D7D3D45E6AC2a7 \
+  "isValidatorOnline(address)(bool)" 0xYOUR_VALIDATOR --rpc-url <rpc>
+
+cast call 0x2e05FfB10eF99e3c8B2BE1b752D7D3D45E6AC2a7 \
+  "getOnlineValidators()(address[])" --rpc-url <rpc>
 ```
 
-#### Creating the rendezvous point
+Always check against a **public** RPC, not your own node. A node that has drifted
+onto a minority fork will happily report your validator as online using its own
+view of the chain while the network disagrees.
 
-With all nodes that you want to run initialized to the desired genesis state, you'll need to
-start a bootstrap node that others can use to find each other in your network and/or over
-the internet. The clean way is to configure and run a dedicated bootnode:
+### Claim rewards
 
-```shell
-$ bootnode --genkey=boot.key
-$ bootnode --nodekey=boot.key
+```bash
+# validator's own share (self-stake earnings + commission)
+cast send <staking> "claimValidatorRewards()" ...
+# a delegator's share
+cast send <staking> "claimRewards(address)" <validator> ...
 ```
 
-With the bootnode online, it will display an [`enode` URL](https://ethereum.org/en/developers/docs/networking-layer/network-addresses/#enode)
-that other nodes can use to connect to it and exchange peer information. Make sure to
-replace the displayed IP address information (most probably `[::]`) with your externally
-accessible IP to get the actual `enode` URL.
+Note that delegated stake earns for the **delegator** minus commission; only the
+self-stake portion and the commission accrue to the validator operator.
 
-*Note: You could also use a full-fledged `geth` node as a bootnode, but it's the less
-recommended way.*
+## Finality and reorg protection
 
-#### Starting up your member nodes
+PoS attestations are not decorative. `core/blockchain_reorgguard.go` enforces:
 
-With the bootnode operational and externally reachable (you can try
-`telnet <ip> <port>` to ensure it's indeed reachable), start every subsequent `geth`
-node pointed to the bootnode for peer discovery via the `--bootnodes` flag. It will
-probably also be desirable to keep the data directory of your private network separated, so
-do also specify a custom `--datadir` flag.
+- **Guard 1 — finality is absolute.** A block the validator set has finalized is
+  never unwound, no matter how much proof-of-work backs a competing chain.
+- **Guard 2 — depth limit.** Reorgs deeper than `--reorg.limit` (default 128) are
+  refused while the node is at the tip. `--reorg.limitgrace` (default 10m) stops
+  this stranding a node that is simply catching up.
 
-```shell
-$ geth --datadir=path/to/custom/data/folder --bootnodes=<bootnode-enode-url-from-above>
+This matters because Altcoinchain's network hashrate is small enough that a single
+modern GPU can privately outmine it. Guard 1 only works while finality is actually
+advancing, which needs at least one online validator holding a real key (above).
+
+```bash
+# how far finality has advanced on your node
+geth attach <ipc> --exec "validator.getLastFinalizedBlock()"
 ```
 
-*Note: Since your network will be completely cut off from the main and test networks, you'll
-also need to configure a miner to process transactions and create new blocks for you.*
+## RPC Endpoints
 
-#### Running a private miner
+### HTTP RPC
 
-Mining on the public Altcoinchain network is a complex task as it's only feasible using GPUs, FPGAs and ASICs. For information on such a
-setup, please consult the [Altcoinchain discord](https://discord.gg/hcXHyQP4Je).
-
-In a private network setting, however a single CPU miner instance is more than enough for
-practical purposes as it can produce a stable stream of blocks at the correct intervals
-without needing heavy resources (consider running on a single thread, no need for multiple
-ones either). To start a `geth` instance for mining, run it with all your usual flags, extended
-by:
-
-```shell
-$ geth <usual-flags> --mine --miner.threads=1 --miner.etherbase=0x0000000000000000000000000000000000000000
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+  http://127.0.0.1:8332
 ```
 
-Which will start mining blocks and transactions on a single CPU thread, crediting all
-proceedings to the account specified by `--miner.etherbase`. You can further tune the mining
-by changing the default gas limit blocks converge to (`--miner.targetgaslimit`) and the price
-transactions are accepted at (`--miner.gasprice`).
+### WebSocket
 
-## Contribution
+```javascript
+const ws = new WebSocket('ws://127.0.0.1:8333');
+```
 
-Thank you for considering to help out with the source code! We welcome contributions
-from anyone on the internet, and are grateful for even the smallest of fixes!
+## Run as Systemd Service
 
-If you'd like to contribute to go-altcoinchain, please fork, fix, commit and send a pull request
-for the maintainers to review and merge into the main code base. If you wish to submit
-more complex changes though, please check up with the core devs first on [our Discord Server](https://discord.gg/invite/nthXNEv)
-to ensure those changes are in line with the general philosophy of the project and/or get
-some early feedback which can make both your efforts much lighter as well as our review
-and merge procedures quick and simple.
+Create `/etc/systemd/system/altcoinchain.service`:
 
-Please make sure your contributions adhere to our coding guidelines:
+```ini
+[Unit]
+Description=Altcoinchain Node
+After=network.target
 
- * Code must adhere to the official Go [formatting](https://golang.org/doc/effective_go.html#formatting)
-   guidelines (i.e. uses [gofmt](https://golang.org/cmd/gofmt/)).
- * Code must be documented adhering to the official Go [commentary](https://golang.org/doc/effective_go.html#commentary)
-   guidelines.
- * Pull requests need to be based on and opened against the `master` branch.
- * Commit messages should be prefixed with the package(s) they modify.
-   * E.g. "eth, rpc: make trace configs optional"
+[Service]
+Type=simple
+User=YOUR_USER
+ExecStart=/path/to/geth --datadir /home/YOUR_USER/.altcoinchain --networkid 2330 --port 31303 --http --http.addr 127.0.0.1 --http.port 8332 --http.api eth,net,web3,personal,miner,txpool,debug --ws --ws.addr 127.0.0.1 --ws.port 8333 --ws.api eth,net,web3,personal,miner,txpool --bootnodes "enode://9355a3870bb3c7882a51797c6633380359c827febdbd89c87c0ff72914b351caf1642e5326ba78532f249082aad7c08d524cd418514865a49f8a5bca200ecbba@154.12.237.243:30303,enode://926900ccd1e2f218ce0d3c31f731eb1af1be60049624db9a01fa73588157f3fb7fd04c5f0874ca7cc030ab79d836c1961c3ef67aefe09f352e8a7aba03d3cdbf@154.12.237.243:30304,enode://c2e73bd6232c73ab7887d92aa904413597638ebf935791ca197bdd7902560baa7a4e8a1235b6d10d121ffc4602373476e7daa7d20d326466a5ae423be6581707@99.248.100.186:31303" --ethstats=YourNodeName:alt@alt-stat.outsidethebox.top --syncmode snap --maxpeers 50 --cache 512
+Restart=on-failure
+RestartSec=10
 
-Please see the [Developers' Guide](https://geth.ethereum.org/docs/developers/devguide)
-for more details on configuring your environment, managing project dependencies, and
-testing procedures.
+[Install]
+WantedBy=multi-user.target
+```
+
+Then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable altcoinchain
+sudo systemctl start altcoinchain
+sudo journalctl -u altcoinchain -f  # View logs
+```
+
+## Hardware Requirements
+
+**Minimum:**
+- CPU: 2+ cores
+- RAM: 4GB
+- Storage: 20GB SSD
+- Network: 8 Mbps
+
+**Recommended:**
+- CPU: 4+ cores
+- RAM: 8GB+
+- Storage: 50GB+ SSD
+- Network: 25+ Mbps
+
+## Troubleshooting
+
+### Node won't sync
+```bash
+# Check peers
+./geth attach ~/.altcoinchain/geth.ipc --exec "admin.peers.length"
+
+# Manually add peer
+./geth attach ~/.altcoinchain/geth.ipc --exec 'admin.addPeer("enode://...")'
+```
+
+### Reset blockchain data
+```bash
+# Remove chaindata (keeps accounts)
+rm -rf ~/.altcoinchain/geth/chaindata
+rm -rf ~/.altcoinchain/geth/ethash
+
+# Re-initialize
+./geth --datadir ~/.altcoinchain init genesis.json
+```
+
+### Check sync status
+```bash
+./geth attach ~/.altcoinchain/geth.ipc --exec "eth.syncing"
+# Returns false when fully synced
+```
+
+### Node stopped at block 7,199,999
+Its stored chain config predates the hybrid fork, so it rejects block 7,200,000.
+Re-run `init` with the current genesis (see Network Information above). Staging a
+new `genesis.json` is not enough on its own — most launch scripts only run `init`
+when the datadir is empty, so an existing node never picks it up.
+
+### Validator shows offline, but my node says it is online
+Check against a public RPC, not your own node. `eth.syncing` returning `false`
+means "not actively downloading", **not** "on the right chain" — a node on a
+private fork reports itself synced and online. Compare block *hashes*, not just
+heights:
+
+```bash
+# same height on both, then compare the hashes
+./geth attach ~/.altcoinchain/geth.ipc --exec "eth.getBlock(7200000).hash"
+curl -s -X POST -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x6DDD00",false],"id":1}' \
+  <public-rpc> | grep -o '"hash":"0x[0-9a-f]*"'
+```
+
+If they differ, you are on a fork. `admin.peers.length` of `0` is the usual cause.
+
+### Zero peers
+Altcoinchain's discovery DHT is crowded with nodes from other networks, so
+discovery alone often finds nothing. Peers come from `static-nodes.json` in the
+datadir, or `admin.addPeer(...)` at runtime. **Never leave `--mine` running on a
+node with no peers** — it cannot publish what it finds, so it silently builds a
+private chain that has to be discarded later.
+
+## Community
+
+- Discord: https://discord.gg/hcXHyQP4Je
+- Explorer: https://altscan.io
+- Ethstats: https://alt-stat.outsidethebox.top
 
 ## License
 
-The go-ethereum library (i.e. all code outside of the `cmd` directory) is licensed under the
-[GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html),
-also included in our repository in the `COPYING.LESSER` file.
-
-The go-ethereum binaries (i.e. all code inside of the `cmd` directory) is licensed under the
-[GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html), also
-included in our repository in the `COPYING` file.
+GNU General Public License v3.0

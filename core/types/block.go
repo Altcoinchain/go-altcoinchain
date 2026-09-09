@@ -87,23 +87,36 @@ type Header struct {
 	// BaseFee was added by EIP-1559 and is ignored in legacy headers.
 	BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"`
 
-	/*
-		TODO (MariusVanDerWijden) Add this field once needed
-		// Random was added during the merge and contains the BeaconState randomness
-		Random common.Hash `json:"random" rlp:"optional"`
-	*/
+	// EIP-7594 PeerDAS fields added by the FUSAKA upgrade.
+	// These are only populated when the FUSAKA fork is active.
+	DataRoot       common.Hash `json:"dataRoot"       rlp:"optional"`
+	BlobHash       common.Hash `json:"blobHash"       rlp:"optional"`
+	ShardCount     uint64      `json:"shardCount"     rlp:"optional"`
+	DataShardCount uint64      `json:"dataShardCount" rlp:"optional"`
+
+	// AttestationsHash commits to the validator attestations carried in this
+	// block's body, exactly as TxHash commits to its transactions. Zero before
+	// the finality fork, and RLP omits trailing zero-valued optional fields, so
+	// legacy header hashes and fork IDs are unchanged until activation.
+	//
+	// NOTE: setting this field forces every preceding optional field (BaseFee and
+	// the PeerDAS group) to be encoded as well, so it must be gated on a fork
+	// block and switch on at the same height for every node.
+	AttestationsHash common.Hash `json:"attestationsRoot" rlp:"optional"`
 }
 
 // field type overrides for gencodec
 type headerMarshaling struct {
-	Difficulty *hexutil.Big
-	Number     *hexutil.Big
-	GasLimit   hexutil.Uint64
-	GasUsed    hexutil.Uint64
-	Time       hexutil.Uint64
-	Extra      hexutil.Bytes
-	BaseFee    *hexutil.Big
-	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Difficulty     *hexutil.Big
+	Number         *hexutil.Big
+	GasLimit       hexutil.Uint64
+	GasUsed        hexutil.Uint64
+	Time           hexutil.Uint64
+	Extra          hexutil.Bytes
+	BaseFee        *hexutil.Big
+	ShardCount     hexutil.Uint64
+	DataShardCount hexutil.Uint64
+	Hash           common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -160,6 +173,10 @@ func (h *Header) EmptyReceipts() bool {
 type Body struct {
 	Transactions []*Transaction
 	Uncles       []*Header
+
+	// Attestations carried by this block, committed to by Header.AttestationsHash.
+	// Optional so pre-fork two-element bodies decode unchanged.
+	Attestations []*Attestation `rlp:"optional"`
 }
 
 // Block represents an entire block in the Ethereum blockchain.
@@ -311,10 +328,19 @@ func (b *Block) BaseFee() *big.Int {
 	return new(big.Int).Set(b.header.BaseFee)
 }
 
+// EIP-7594 PeerDAS accessors
+func (b *Block) DataRoot() common.Hash       { return b.header.DataRoot }
+func (b *Block) BlobHash() common.Hash       { return b.header.BlobHash }
+func (b *Block) ShardCount() uint64          { return b.header.ShardCount }
+func (b *Block) DataShardCount() uint64      { return b.header.DataShardCount }
+func (h *Header) HasPeerDAS() bool           { return h.ShardCount > 0 }
+
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
+// Named fields: Body gained an optional Attestations field, and a positional
+// literal would silently break again the next time it grows.
+func (b *Block) Body() *Body { return &Body{Transactions: b.transactions, Uncles: b.uncles} }
 
 // Size returns the true RLP encoded storage size of the block, either by encoding
 // and returning it, or returning a previously cached value.

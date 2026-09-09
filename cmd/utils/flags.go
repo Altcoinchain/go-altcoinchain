@@ -243,6 +243,18 @@ var (
 		Value:    ethconfig.Defaults.TxLookupLimit,
 		Category: flags.EthCategory,
 	}
+	ReorgLimitFlag = &cli.Uint64Flag{
+		Name:     "reorg.limit",
+		Usage:    "Refuse chain reorgs deeper than this many blocks while synced (0 = unlimited). Local policy, not a consensus rule",
+		Value:    ethconfig.Defaults.ReorgLimit,
+		Category: flags.EthCategory,
+	}
+	ReorgLimitGraceFlag = &cli.DurationFlag{
+		Name:     "reorg.limitgrace",
+		Usage:    "Only enforce --reorg.limit when the local head is younger than this (protects a node that is still catching up)",
+		Value:    ethconfig.Defaults.ReorgLimitGrace,
+		Category: flags.EthCategory,
+	}
 	LightKDFFlag = &cli.BoolFlag{
 		Name:     "lightkdf",
 		Usage:    "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
@@ -1801,6 +1813,12 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	}
 	if ctx.IsSet(TxLookupLimitFlag.Name) {
 		cfg.TxLookupLimit = ctx.Uint64(TxLookupLimitFlag.Name)
+	}
+	if ctx.IsSet(ReorgLimitFlag.Name) {
+		cfg.ReorgLimit = ctx.Uint64(ReorgLimitFlag.Name)
+	}
+	if ctx.IsSet(ReorgLimitGraceFlag.Name) {
+		cfg.ReorgLimitGrace = ctx.Duration(ReorgLimitGraceFlag.Name)
 	}
 	if ctx.IsSet(CacheFlag.Name) || ctx.IsSet(CacheTrieFlag.Name) {
 		cfg.TrieCleanCache = ctx.Int(CacheFlag.Name) * ctx.Int(CacheTrieFlag.Name) / 100

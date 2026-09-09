@@ -206,6 +206,8 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			TrieTimeLimit:       config.TrieTimeout,
 			SnapshotLimit:       config.SnapshotCache,
 			Preimages:           config.Preimages,
+			ReorgLimit:          config.ReorgLimit,
+			ReorgLimitGrace:     config.ReorgLimitGrace,
 		}
 	)
 	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, chainConfig, eth.engine, vmConfig, eth.shouldPreserve, &config.TxLookupLimit)
@@ -329,6 +331,9 @@ func (s *Ethereum) APIs() []rpc.API {
 		}, {
 			Namespace: "net",
 			Service:   s.netRPCService,
+		}, {
+			Namespace: "validator",
+			Service:   NewValidatorAPI(s),
 		},
 	}...)
 }
@@ -543,6 +548,14 @@ func (s *Ethereum) Start() error {
 	}
 	// Start the networking layer and the light server if requested
 	s.handler.Start(maxPeers)
+
+	// Keep the hybrid engine's validator set in sync with the staking
+	// contract (no-op unless hybrid consensus is configured).
+	s.startHybridValidatorUpdater()
+	// Attest validator liveness from local validator accounts.
+	s.startHybridAttestor()
+	// Submit on-chain evidence for any detected double-sign offenses.
+	s.startHybridSlasher()
 	return nil
 }
 

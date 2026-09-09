@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Altcoinchain Wallet</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Custom Title Bar */
+    .title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 32px;
+      background: #0d0d0d;
+      -webkit-app-region: drag;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      border-bottom: 1px solid #222;
+    }
+
+    .title-bar-title {
+      padding-left: 12px;
+      font-size: 13px;
+      color: #888;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-bar-title img {
+      width: 16px;
+      height: 16px;
+    }
+
+    .window-controls {
+      display: flex;
+      -webkit-app-region: no-drag;
+    }
+
+    .window-controls button {
+      width: 46px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: #888;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .window-controls button:hover {
+      background: #333;
+      color: #fff;
+    }
+
+    .window-controls button.close:hover {
+      background: #e81123;
+      color: #fff;
+    }
+
+    .window-controls button svg {
+      width: 10px;
+      height: 10px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-top: 52px; /* Account for title bar */
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid #333;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo h1 {
+      font-size: 24px;
+      background: linear-gradient(90deg, #00ff88, #00ccff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      border-radius: 25px;
+    }
+
+    .status.disconnected {
+      background: rgba(255, 68, 68, 0.1);
+      border-color: rgba(255, 68, 68, 0.3);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #00ff88;
+      animation: pulse 2s infinite;
+    }
+
+    .status.disconnected .status-dot {
+      background: #ff4444;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 25px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 255, 136, 0.1);
+    }
+
+    .stat-card h3 {
+      color: #888;
+      font-size: 14px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #00ff88;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    @media (max-width: 900px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 25px;
+    }
+
+    .panel h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .wallet-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .wallet-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .wallet-address {
+      font-family: monospace;
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .wallet-balance {
+      font-size: 18px;
+      font-weight: bold;
+      color: #00ff88;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, #00ff88, #00ccff);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #00ff88;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #888;
+      font-size: 14px;
+    }
+
+    .tx-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .tx-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .tx-item:last-child {
+      border-bottom: none;
+    }
+
+    .tx-hash {
+      font-family: monospace;
+      font-size: 12px;
+      color: #00ccff;
+    }
+
+    .tx-amount {
+      color: #00ff88;
+    }
+
+    .tx-amount.negative {
+      color: #ff4444;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(0, 255, 136, 0.1);
+      border-top-color: #00ff88;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .import-key {
+      margin-top: 15px;
+    }
+
+    .error-msg {
+      color: #ff4444;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .success-msg {
+      color: #00ff88;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 10px;
+    }
+
+    .tab-btn {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #888;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: rgba(0, 255, 136, 0.1);
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+
+    .tab-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Token list */
+    .token-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin-bottom: 10px;
+    }
+
+    .token-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .token-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00ff88, #00ccff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 12px;
+      color: #000;
+    }
+
+    .token-name {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .token-symbol {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .token-balance {
+      text-align: right;
+    }
+
+    .token-balance-value {
+      font-size: 16px;
+      font-weight: bold;
+      color: #00ff88;
+    }
+
+    .token-balance-usd {
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* NFT Grid */
+    .nft-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .nft-card {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .nft-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 255, 136, 0.15);
+      border-color: rgba(0, 255, 136, 0.3);
+    }
+
+    .nft-image {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: linear-gradient(135deg, #1a1a2e, #0a0a0a);
+    }
+
+    .nft-image-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, #1a1a2e, #0a0a0a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #444;
+      font-size: 32px;
+    }
+
+    .nft-info {
+      padding: 10px;
+    }
+
+    .nft-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nft-collection {
+      font-size: 11px;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nft-id {
+      font-size: 10px;
+      color: #00ccff;
+      font-family: monospace;
+    }
+
+    /* Add token form */
+    .add-token-form {
+      margin-top: 15px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      display: none;
+    }
+
+    .add-token-form.show {
+      display: block;
+    }
+
+    .add-token-form input {
+      margin-bottom: 10px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px;
+      color: #666;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+
+    /* Full width panels section */
+    .full-width-section {
+      margin-top: 30px;
+    }
+
+    .panel-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    @media (max-width: 900px) {
+      .panel-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Custom Title Bar -->
+  <div class="title-bar">
+    <div class="title-bar-title">
+      <span>Altcoinchain Wallet</span>
+    </div>
+    <div class="window-controls">
+      <button id="btn-minimize" title="Minimize">
+        <svg viewBox="0 0 10 10" fill="currentColor">
+          <rect x="0" y="4.5" width="10" height="1"/>
+        </svg>
+      </button>
+      <button id="btn-maximize" title="Maximize">
+        <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1">
+          <rect x="0.5" y="0.5" width="9" height="9"/>
+        </svg>
+      </button>
+      <button id="btn-close" class="close" title="Close">
+        <svg viewBox="0 0 10 10" fill="currentColor">
+          <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="logo">
+        <h1>Altcoinchain Wallet</h1>
+      </div>
+      <div class="status" id="status">
+        <div class="status-dot"></div>
+        <span id="status-text">Connecting...</span>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Block Height</h3>
+        <div class="value" id="block-height">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>Fusaka Fork</h3>
+        <div class="value" id="fork-countdown" style="font-size: 20px;">-</div>
+        <div style="font-size: 12px; color: #666; margin-top: 5px;">Block 7,000,000</div>
+      </div>
+      <div class="stat-card">
+        <h3>Total Balance</h3>
+        <div class="value" id="total-balance">0 ALT</div>
+      </div>
+      <div class="stat-card">
+        <h3>Peers</h3>
+        <div class="value" id="peer-count">-</div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="panel">
+        <h2>Wallets</h2>
+        <div class="wallet-list" id="wallet-list">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading wallets...</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="showWatchDialog()">Watch Address</button>
+          <button class="btn btn-secondary" onclick="showImportDialog()">Import Key</button>
+        </div>
+        <div class="import-key" id="watch-dialog" style="display: none;">
+          <label>Watch Address (view balances only)</label>
+          <input type="text" id="watch-address" placeholder="0x...">
+          <button class="btn btn-primary" onclick="addWatchAddress()">Add Address</button>
+          <div id="watch-msg"></div>
+        </div>
+        <div class="import-key" id="import-dialog" style="display: none;">
+          <label>Private Key</label>
+          <input type="password" id="private-key" placeholder="Enter private key...">
+          <button class="btn btn-primary" onclick="importWallet()">Import</button>
+          <div id="import-msg"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Send ALT</h2>
+        <div>
+          <label>From Address</label>
+          <select id="from-address" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; margin-bottom: 15px;">
+            <option value="">Select wallet...</option>
+          </select>
+
+          <label>To Address</label>
+          <input type="text" id="to-address" placeholder="0x...">
+
+          <label>Amount (ALT)</label>
+          <input type="number" id="send-amount" placeholder="0.0" step="0.001">
+
+          <button class="btn btn-primary" onclick="sendTransaction()" style="width: 100%;">Send Transaction</button>
+          <div id="send-msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tokens and NFTs Section -->
+    <div class="full-width-section">
+      <div class="panel-row">
+        <!-- Tokens Panel -->
+        <div class="panel">
+          <h2>Tokens</h2>
+          <div id="tokens-list">
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>Loading tokens...</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-secondary" onclick="toggleAddToken()">Add Token</button>
+            <button class="btn btn-secondary" onclick="refreshTokens()">Refresh</button>
+          </div>
+          <div class="add-token-form" id="add-token-form">
+            <label>Token Contract Address</label>
+            <input type="text" id="token-address" placeholder="0x...">
+            <button class="btn btn-primary" onclick="addCustomToken()">Add Token</button>
+            <div id="add-token-msg"></div>
+          </div>
+        </div>
+
+        <!-- NFTs Panel -->
+        <div class="panel">
+          <h2>NFTs</h2>
+          <div id="nft-list">
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>Loading NFTs...</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-secondary" onclick="toggleAddNFT()">Add NFT Collection</button>
+            <button class="btn btn-secondary" onclick="refreshNFTs()">Refresh</button>
+          </div>
+          <div class="add-token-form" id="add-nft-form">
+            <label>NFT Contract Address (ERC-721)</label>
+            <input type="text" id="nft-contract-address" placeholder="0x...">
+            <button class="btn btn-primary" onclick="addNFTCollection()">Add Collection</button>
+            <div id="add-nft-msg"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const RPC_URL = 'http://127.0.0.1:8332';
+    const FUSAKA_FORK_BLOCK = 7000000;
+    let wallets = JSON.parse(localStorage.getItem('altcoinchain_wallets') || '[]');
+
+    // Default tokens list (WATT and other known tokens on Altcoinchain)
+    const DEFAULT_TOKENS = [
+      { address: '0x6645143e49B3a15d8F205658903a55E520444698', symbol: 'WATT', name: 'Watt Token', decimals: 18 }
+    ];
+    let customTokens = JSON.parse(localStorage.getItem('altcoinchain_tokens') || '[]');
+    let nftCollections = JSON.parse(localStorage.getItem('altcoinchain_nfts') || '[]');
+
+    // ERC-20 ABI (balanceOf, name, symbol, decimals)
+    const ERC20_ABI = {
+      balanceOf: '0x70a08231',
+      name: '0x06fdde03',
+      symbol: '0x95d89b41',
+      decimals: '0x313ce567'
+    };
+
+    // ERC-721 ABI (balanceOf, tokenOfOwnerByIndex, tokenURI, name)
+    const ERC721_ABI = {
+      balanceOf: '0x70a08231',
+      tokenOfOwnerByIndex: '0x2f745c59',
+      tokenURI: '0xc87b56dd',
+      name: '0x06fdde03',
+      ownerOf: '0x6352211e'
+    };
+
+    async function rpcCall(method, params = []) {
+      try {
+        const response = await fetch(RPC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 })
+        });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+        return data.result;
+      } catch (error) {
+        console.error('RPC Error:', error);
+        throw error;
+      }
+    }
+
+    async function updateStatus() {
+      try {
+        const blockNumber = await rpcCall('eth_blockNumber');
+        const peerCount = await rpcCall('net_peerCount');
+
+        const currentBlock = parseInt(blockNumber, 16);
+        document.getElementById('block-height').textContent = currentBlock.toLocaleString();
+        document.getElementById('peer-count').textContent = parseInt(peerCount, 16);
+        document.getElementById('status').classList.remove('disconnected');
+        document.getElementById('status-text').textContent = 'Connected';
+
+        // Update Fusaka fork countdown
+        const forkCountdown = document.getElementById('fork-countdown');
+        if (currentBlock >= FUSAKA_FORK_BLOCK) {
+          forkCountdown.textContent = 'ACTIVE';
+          forkCountdown.style.color = '#00ff88';
+        } else {
+          const blocksRemaining = FUSAKA_FORK_BLOCK - currentBlock;
+          forkCountdown.textContent = blocksRemaining.toLocaleString() + ' blocks';
+          forkCountdown.style.color = blocksRemaining < 10000 ? '#ffaa00' : '#00ccff';
+        }
+      } catch (error) {
+        document.getElementById('status').classList.add('disconnected');
+        document.getElementById('status-text').textContent = 'Disconnected';
+        document.getElementById('block-height').textContent = '-';
+        document.getElementById('peer-count').textContent = '-';
+        document.getElementById('fork-countdown').textContent = '-';
+      }
+    }
+
+    async function updateWallets() {
+      const listEl = document.getElementById('wallet-list');
+      const selectEl = document.getElementById('from-address');
+
+      if (wallets.length === 0) {
+        listEl.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No wallets yet. Create or import one.</p>';
+        selectEl.innerHTML = '<option value="">Select wallet...</option>';
+        document.getElementById('total-balance').textContent = '0 ALT';
+        return;
+      }
+
+      let totalBalance = 0n;
+      let html = '';
+      let selectHtml = '<option value="">Select wallet...</option>';
+
+      for (const wallet of wallets) {
+        try {
+          const balance = await rpcCall('eth_getBalance', [wallet.address, 'latest']);
+          const balanceWei = BigInt(balance);
+          totalBalance += balanceWei;
+          const balanceAlt = (Number(balanceWei) / 1e18).toFixed(4);
+
+          const watchLabel = wallet.watchOnly ? ' <span style="color:#666;font-size:10px;">(watch)</span>' : '';
+          html += `
+            <div class="wallet-item">
+              <div>
+                <div class="wallet-address">${wallet.address.slice(0, 10)}...${wallet.address.slice(-8)}${watchLabel}</div>
+              </div>
+              <div class="wallet-balance">${balanceAlt} ALT</div>
+            </div>
+          `;
+          selectHtml += `<option value="${wallet.address}">${wallet.address.slice(0, 10)}...${wallet.address.slice(-8)} (${balanceAlt} ALT)</option>`;
+        } catch (error) {
+          html += `
+            <div class="wallet-item">
+              <div class="wallet-address">${wallet.address.slice(0, 10)}...${wallet.address.slice(-8)}</div>
+              <div class="wallet-balance">Error</div>
+            </div>
+          `;
+        }
+      }
+
+      listEl.innerHTML = html;
+      selectEl.innerHTML = selectHtml;
+      document.getElementById('total-balance').textContent = (Number(totalBalance) / 1e18).toFixed(4) + ' ALT';
+    }
+
+    function showWatchDialog() {
+      document.getElementById('watch-dialog').style.display =
+        document.getElementById('watch-dialog').style.display === 'none' ? 'block' : 'none';
+      document.getElementById('import-dialog').style.display = 'none';
+    }
+
+    function showImportDialog() {
+      document.getElementById('import-dialog').style.display =
+        document.getElementById('import-dialog').style.display === 'none' ? 'block' : 'none';
+      document.getElementById('watch-dialog').style.display = 'none';
+    }
+
+    function addWatchAddress() {
+      const address = document.getElementById('watch-address').value.trim();
+      const msgEl = document.getElementById('watch-msg');
+
+      if (!address || !address.startsWith('0x') || address.length !== 42) {
+        msgEl.innerHTML = '<div class="error-msg">Please enter a valid address (0x...)</div>';
+        return;
+      }
+
+      if (wallets.find(w => w.address.toLowerCase() === address.toLowerCase())) {
+        msgEl.innerHTML = '<div class="error-msg">Address already added</div>';
+        return;
+      }
+
+      wallets.push({ address: address, watchOnly: true });
+      localStorage.setItem('altcoinchain_wallets', JSON.stringify(wallets));
+
+      document.getElementById('watch-address').value = '';
+      document.getElementById('watch-dialog').style.display = 'none';
+      msgEl.innerHTML = '<div class="success-msg">Address added!</div>';
+
+      updateWallets();
+      updateTokens();
+      updateNFTs();
+      setTimeout(() => msgEl.innerHTML = '', 3000);
+    }
+
+    function createWallet() {
+      alert('For security, please use an external wallet to generate keys, then use "Watch Address" to view balances.');
+    }
+
+    async function importWallet() {
+      const privateKey = document.getElementById('private-key').value.trim();
+      const msgEl = document.getElementById('import-msg');
+
+      if (!privateKey) {
+        msgEl.innerHTML = '<div class="error-msg">Please enter a private key</div>';
+        return;
+      }
+
+      try {
+        importPrivateKey(privateKey);
+        document.getElementById('private-key').value = '';
+        document.getElementById('import-dialog').style.display = 'none';
+        msgEl.innerHTML = '<div class="success-msg">Wallet imported successfully!</div>';
+        setTimeout(() => msgEl.innerHTML = '', 3000);
+      } catch (error) {
+        msgEl.innerHTML = `<div class="error-msg">${error.message}</div>`;
+      }
+    }
+
+    function importPrivateKey(privateKey) {
+      // Simple implementation - derive address from private key
+      // In production, use ethers.js for proper cryptographic operations
+      const key = privateKey.startsWith('0x') ? privateKey : '0x' + privateKey;
+
+      if (key.length !== 66) {
+        throw new Error('Invalid private key length');
+      }
+
+      // For demo purposes, generate a deterministic address from the key
+      // Real implementation should use secp256k1
+      const hash = simpleHash(key);
+      const address = '0x' + hash.slice(-40);
+
+      if (wallets.find(w => w.address.toLowerCase() === address.toLowerCase())) {
+        throw new Error('Wallet already exists');
+      }
+
+      wallets.push({ address, privateKey: key });
+      localStorage.setItem('altcoinchain_wallets', JSON.stringify(wallets));
+      updateWallets();
+    }
+
+    function simpleHash(str) {
+      let hash = 0;
+      const result = [];
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+        result.push(Math.abs(hash).toString(16).padStart(8, '0'));
+      }
+      return result.join('').slice(0, 40);
+    }
+
+    async function sendTransaction() {
+      const from = document.getElementById('from-address').value;
+      const to = document.getElementById('to-address').value;
+      const amount = document.getElementById('send-amount').value;
+      const msgEl = document.getElementById('send-msg');
+
+      if (!from || !to || !amount) {
+        msgEl.innerHTML = '<div class="error-msg">Please fill in all fields</div>';
+        return;
+      }
+
+      try {
+        const wallet = wallets.find(w => w.address.toLowerCase() === from.toLowerCase());
+        if (!wallet) throw new Error('Wallet not found');
+
+        const nonce = await rpcCall('eth_getTransactionCount', [from, 'latest']);
+        const gasPrice = await rpcCall('eth_gasPrice');
+        const value = '0x' + (BigInt(Math.floor(parseFloat(amount) * 1e18))).toString(16);
+
+        msgEl.innerHTML = '<div class="success-msg">Transaction signing... (use web wallet for full functionality)</div>';
+
+        // Note: For actual transaction signing, you need ethers.js or similar library
+        // This is a UI demo - integrate with the React wallet for full functionality
+
+      } catch (error) {
+        msgEl.innerHTML = `<div class="error-msg">${error.message}</div>`;
+      }
+    }
+
+    // ==================== TOKEN FUNCTIONS ====================
+
+    async function callContract(contractAddress, data) {
+      const result = await rpcCall('eth_call', [{
+        to: contractAddress,
+        data: data
+      }, 'latest']);
+      return result;
+    }
+
+    function encodeAddress(address) {
+      return address.slice(2).toLowerCase().padStart(64, '0');
+    }
+
+    function decodeString(hex) {
+      if (!hex || hex === '0x') return '';
+      try {
+        // Remove 0x prefix
+        hex = hex.slice(2);
+        // String is encoded as: offset (32 bytes) + length (32 bytes) + data
+        const length = parseInt(hex.slice(64, 128), 16);
+        const data = hex.slice(128, 128 + length * 2);
+        let str = '';
+        for (let i = 0; i < data.length; i += 2) {
+          const charCode = parseInt(data.slice(i, i + 2), 16);
+          if (charCode > 0) str += String.fromCharCode(charCode);
+        }
+        return str;
+      } catch {
+        return '';
+      }
+    }
+
+    function decodeUint(hex) {
+      if (!hex || hex === '0x') return 0n;
+      return BigInt(hex);
+    }
+
+    async function getTokenInfo(tokenAddress) {
+      try {
+        const [nameHex, symbolHex, decimalsHex] = await Promise.all([
+          callContract(tokenAddress, ERC20_ABI.name),
+          callContract(tokenAddress, ERC20_ABI.symbol),
+          callContract(tokenAddress, ERC20_ABI.decimals)
+        ]);
+
+        return {
+          address: tokenAddress,
+          name: decodeString(nameHex) || 'Unknown Token',
+          symbol: decodeString(symbolHex) || '???',
+          decimals: Number(decodeUint(decimalsHex)) || 18
+        };
+      } catch (error) {
+        console.error('Error getting token info:', error);
+        return null;
+      }
+    }
+
+    async function getTokenBalance(tokenAddress, walletAddress, decimals = 18) {
+      try {
+        const data = ERC20_ABI.balanceOf + encodeAddress(walletAddress);
+        console.log(`Getting balance for ${walletAddress} on token ${tokenAddress}`);
+        console.log(`Call data: ${data}`);
+        const result = await callContract(tokenAddress, data);
+        console.log(`Result: ${result}`);
+        const balance = decodeUint(result);
+        console.log(`Decoded balance: ${balance}`);
+        return Number(balance) / Math.pow(10, decimals);
+      } catch (error) {
+        console.error('Error getting token balance:', error);
+        return 0;
+      }
+    }
+
+    async function updateTokens() {
+      const listEl = document.getElementById('tokens-list');
+
+      if (wallets.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💰</div><p>Import a wallet to see token balances</p></div>';
+        return;
+      }
+
+      const allTokens = [...DEFAULT_TOKENS, ...customTokens];
+
+      if (allTokens.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💰</div><p>No tokens added yet</p></div>';
+        return;
+      }
+
+      let html = '';
+
+      for (const token of allTokens) {
+        let totalBalance = 0;
+
+        for (const wallet of wallets) {
+          try {
+            const balance = await getTokenBalance(token.address, wallet.address, token.decimals);
+            totalBalance += balance;
+          } catch {}
+        }
+
+        const iconLetter = token.symbol.charAt(0).toUpperCase();
+        const iconColors = {
+          'W': 'linear-gradient(135deg, #ffaa00, #ff6600)',
+          'A': 'linear-gradient(135deg, #00ff88, #00ccff)',
+        };
+        const iconBg = iconColors[iconLetter] || 'linear-gradient(135deg, #6366f1, #8b5cf6)';
+
+        html += `
+          <div class="token-item">
+            <div class="token-info">
+              <div class="token-icon" style="background: ${iconBg}">${iconLetter}</div>
+              <div>
+                <div class="token-name">${token.name}</div>
+                <div class="token-symbol">${token.symbol}</div>
+              </div>
+            </div>
+            <div class="token-balance">
+              <div class="token-balance-value">${totalBalance.toFixed(4)}</div>
+              <div class="token-balance-usd">${token.symbol}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      listEl.innerHTML = html || '<div class="empty-state"><div class="empty-state-icon">💰</div><p>No token balances found</p></div>';
+    }
+
+    function toggleAddToken() {
+      const form = document.getElementById('add-token-form');
+      form.classList.toggle('show');
+    }
+
+    async function addCustomToken() {
+      const address = document.getElementById('token-address').value.trim();
+      const msgEl = document.getElementById('add-token-msg');
+
+      if (!address || !address.startsWith('0x') || address.length !== 42) {
+        msgEl.innerHTML = '<div class="error-msg">Please enter a valid contract address</div>';
+        return;
+      }
+
+      try {
+        msgEl.innerHTML = '<div style="color: #888;">Loading token info...</div>';
+        const tokenInfo = await getTokenInfo(address);
+
+        if (!tokenInfo) {
+          msgEl.innerHTML = '<div class="error-msg">Could not load token info. Make sure this is a valid ERC-20 contract.</div>';
+          return;
+        }
+
+        // Check if already added
+        if (customTokens.find(t => t.address.toLowerCase() === address.toLowerCase()) ||
+            DEFAULT_TOKENS.find(t => t.address.toLowerCase() === address.toLowerCase())) {
+          msgEl.innerHTML = '<div class="error-msg">Token already added</div>';
+          return;
+        }
+
+        customTokens.push(tokenInfo);
+        localStorage.setItem('altcoinchain_tokens', JSON.stringify(customTokens));
+
+        document.getElementById('token-address').value = '';
+        document.getElementById('add-token-form').classList.remove('show');
+        msgEl.innerHTML = '<div class="success-msg">Token added successfully!</div>';
+
+        await updateTokens();
+        setTimeout(() => msgEl.innerHTML = '', 3000);
+      } catch (error) {
+        msgEl.innerHTML = `<div class="error-msg">${error.message}</div>`;
+      }
+    }
+
+    async function refreshTokens() {
+      const listEl = document.getElementById('tokens-list');
+      listEl.innerHTML = '<div class="loading"><div class="spinner"></div><p>Refreshing tokens...</p></div>';
+      await updateTokens();
+    }
+
+    // ==================== NFT FUNCTIONS ====================
+
+    async function getNFTBalance(contractAddress, walletAddress) {
+      try {
+        const data = ERC721_ABI.balanceOf + encodeAddress(walletAddress);
+        const result = await callContract(contractAddress, data);
+        return Number(decodeUint(result));
+      } catch {
+        return 0;
+      }
+    }
+
+    async function getNFTTokenId(contractAddress, walletAddress, index) {
+      try {
+        const data = ERC721_ABI.tokenOfOwnerByIndex + encodeAddress(walletAddress) + index.toString(16).padStart(64, '0');
+        const result = await callContract(contractAddress, data);
+        return decodeUint(result).toString();
+      } catch {
+        return null;
+      }
+    }
+
+    async function getNFTTokenURI(contractAddress, tokenId) {
+      try {
+        const data = ERC721_ABI.tokenURI + BigInt(tokenId).toString(16).padStart(64, '0');
+        const result = await callContract(contractAddress, data);
+        return decodeString(result);
+      } catch {
+        return '';
+      }
+    }
+
+    async function getNFTMetadata(tokenURI) {
+      if (!tokenURI) return null;
+
+      try {
+        // Handle IPFS URIs
+        let url = tokenURI;
+        if (url.startsWith('ipfs://')) {
+          url = 'https://ipfs.io/ipfs/' + url.slice(7);
+        }
+
+        const response = await fetch(url);
+        const metadata = await response.json();
+        return metadata;
+      } catch {
+        return null;
+      }
+    }
+
+    async function updateNFTs() {
+      const listEl = document.getElementById('nft-list');
+
+      if (wallets.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🖼️</div><p>Import a wallet to see NFTs</p></div>';
+        return;
+      }
+
+      if (nftCollections.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🖼️</div><p>No NFT collections added.<br>Add a collection to view your NFTs.</p></div>';
+        return;
+      }
+
+      let allNFTs = [];
+
+      for (const collection of nftCollections) {
+        for (const wallet of wallets) {
+          try {
+            const balance = await getNFTBalance(collection.address, wallet.address);
+
+            for (let i = 0; i < Math.min(balance, 50); i++) { // Limit to 50 per collection
+              const tokenId = await getNFTTokenId(collection.address, wallet.address, i);
+              if (tokenId !== null) {
+                const tokenURI = await getNFTTokenURI(collection.address, tokenId);
+                const metadata = await getNFTMetadata(tokenURI);
+
+                allNFTs.push({
+                  collection: collection.name,
+                  contractAddress: collection.address,
+                  tokenId: tokenId,
+                  name: metadata?.name || `#${tokenId}`,
+                  image: metadata?.image || '',
+                  description: metadata?.description || ''
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error loading NFTs:', error);
+          }
+        }
+      }
+
+      if (allNFTs.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🖼️</div><p>No NFTs found in your wallet</p></div>';
+        return;
+      }
+
+      let html = '<div class="nft-grid">';
+
+      for (const nft of allNFTs) {
+        let imageUrl = nft.image;
+        if (imageUrl.startsWith('ipfs://')) {
+          imageUrl = 'https://ipfs.io/ipfs/' + imageUrl.slice(7);
+        }
+
+        html += `
+          <div class="nft-card" title="${nft.description || nft.name}">
+            ${imageUrl ?
+              `<img class="nft-image" src="${imageUrl}" alt="${nft.name}" onerror="this.outerHTML='<div class=\\'nft-image-placeholder\\'>🖼️</div>'" loading="lazy">` :
+              '<div class="nft-image-placeholder">🖼️</div>'
+            }
+            <div class="nft-info">
+              <div class="nft-name">${nft.name}</div>
+              <div class="nft-collection">${nft.collection}</div>
+              <div class="nft-id">#${nft.tokenId}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      html += '</div>';
+      listEl.innerHTML = html;
+    }
+
+    function toggleAddNFT() {
+      const form = document.getElementById('add-nft-form');
+      form.classList.toggle('show');
+    }
+
+    async function addNFTCollection() {
+      const address = document.getElementById('nft-contract-address').value.trim();
+      const msgEl = document.getElementById('add-nft-msg');
+
+      if (!address || !address.startsWith('0x') || address.length !== 42) {
+        msgEl.innerHTML = '<div class="error-msg">Please enter a valid contract address</div>';
+        return;
+      }
+
+      try {
+        msgEl.innerHTML = '<div style="color: #888;">Loading collection info...</div>';
+
+        // Try to get collection name
+        let name = 'Unknown Collection';
+        try {
+          const nameHex = await callContract(address, ERC721_ABI.name);
+          name = decodeString(nameHex) || 'Unknown Collection';
+        } catch {}
+
+        // Check if already added
+        if (nftCollections.find(c => c.address.toLowerCase() === address.toLowerCase())) {
+          msgEl.innerHTML = '<div class="error-msg">Collection already added</div>';
+          return;
+        }
+
+        nftCollections.push({ address, name });
+        localStorage.setItem('altcoinchain_nfts', JSON.stringify(nftCollections));
+
+        document.getElementById('nft-contract-address').value = '';
+        document.getElementById('add-nft-form').classList.remove('show');
+        msgEl.innerHTML = '<div class="success-msg">Collection added! Loading NFTs...</div>';
+
+        await updateNFTs();
+        setTimeout(() => msgEl.innerHTML = '', 3000);
+      } catch (error) {
+        msgEl.innerHTML = `<div class="error-msg">${error.message}</div>`;
+      }
+    }
+
+    async function refreshNFTs() {
+      const listEl = document.getElementById('nft-list');
+      listEl.innerHTML = '<div class="loading"><div class="spinner"></div><p>Refreshing NFTs...</p></div>';
+      await updateNFTs();
+    }
+
+    // ==================== WINDOW CONTROLS ====================
+
+    // Window controls
+    if (window.electronAPI) {
+      document.getElementById('btn-minimize').addEventListener('click', () => {
+        window.electronAPI.minimize();
+      });
+      document.getElementById('btn-maximize').addEventListener('click', () => {
+        window.electronAPI.maximize();
+      });
+      document.getElementById('btn-close').addEventListener('click', () => {
+        window.electronAPI.close();
+      });
+    }
+
+    // ==================== INITIALIZE ====================
+
+    // Initialize
+    updateStatus();
+    updateWallets();
+    updateTokens();
+    updateNFTs();
+
+    // Auto-refresh
+    setInterval(updateStatus, 5000);
+    setInterval(updateWallets, 30000);
+    setInterval(updateTokens, 60000);
+    setInterval(updateNFTs, 120000);
+  </script>
+</body>
+</html>

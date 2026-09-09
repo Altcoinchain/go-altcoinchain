@@ -1,0 +1,10 @@
+[
+  {
+    "address": "0xb92c4e283b783f5d0d7cb3b22c4c7c9fc9529216",
+    "name": "Mining Game",
+    "type": "ERC1155",
+    "maxTokenId": 5,
+    "description": "Official Mining Game NFT collection on Altcoinchain",
+    "website": "https://stake.mining.game"
+  }
+]

@@ -1,0 +1,42 @@
+{
+  "name": "altcoinchain-dashboard",
+  "version": "1.0.0",
+  "description": "Altcoinchain Node Dashboard - Hybrid PoW/PoS",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "start-web": "npx http-server . -p 8080 -o",
+    "build": "electron-builder",
+    "build-linux": "electron-builder --linux",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac"
+  },
+  "author": "Altcoinchain",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.altcoinchain.dashboard",
+    "productName": "Altcoinchain Dashboard",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js"
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Finance"
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "mac": {
+      "target": ["dmg"]
+    }
+  }
+}

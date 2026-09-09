@@ -133,6 +133,22 @@ type CacheConfig struct {
 	Preimages           bool          // Whether to store preimage of trie key to the disk
 
 	SnapshotWait bool // Wait for snapshot construction on startup. TODO(karalabe): This is a dirty hack for testing, nuke it
+
+	// ReorgLimit is the deepest chain reorganisation this node will accept while
+	// it is at the tip (0 disables the check). It is a local acceptance policy,
+	// NOT a consensus rule: it does not change block validity, so nodes running
+	// different limits still agree on every block. It exists because a chain
+	// with little hashrate can be reorged cheaply by a miner who builds in
+	// private and releases a longer chain later; refusing to unwind more than
+	// ReorgLimit blocks forces such an attacker to out-mine the network live and
+	// in the open instead.
+	ReorgLimit uint64
+
+	// ReorgLimitGrace bounds how stale the local head may be for ReorgLimit to
+	// be enforced. A node that is legitimately catching up sees deep reorgs as
+	// normal, and must never be bricked by this policy, so the limit only
+	// applies when our head is recent enough that we are plausibly at the tip.
+	ReorgLimitGrace time.Duration
 }
 
 // defaultCacheConfig are the default caching values if none are specified by the
@@ -143,6 +159,11 @@ var defaultCacheConfig = &CacheConfig{
 	TrieTimeLimit:  5 * time.Minute,
 	SnapshotLimit:  256,
 	SnapshotWait:   true,
+	// Reorg protection defaults to OFF here so that tests and any embedder that
+	// builds a chain with the defaults keep stock go-ethereum behaviour. The
+	// node wires its own value in from --reorg.limit (see eth/ethconfig).
+	ReorgLimit:      0,
+	ReorgLimitGrace: DefaultReorgLimitGrace,
 }
 
 // BlockChain represents the canonical chain given a database with a genesis
@@ -2067,6 +2088,15 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		if newBlock == nil {
 			return fmt.Errorf("invalid new chain")
 		}
+	}
+
+	// Refuse reorgs that unwind a finalized block, or that run deeper than this
+	// node's configured limit. Checked here because this is the first point at
+	// which the common ancestor (and therefore the true depth) is known, and it
+	// is still before any state, index or head mutation — so aborting is clean
+	// and simply rejects the incoming chain.
+	if err := bc.checkReorgDepth(commonBlock, oldChain); err != nil {
+		return err
 	}
 
 	// Ensure the user sees large reorgs

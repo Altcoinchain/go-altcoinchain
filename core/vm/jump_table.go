@@ -55,6 +55,7 @@ var (
 	berlinInstructionSet           = newBerlinInstructionSet()
 	londonInstructionSet           = newLondonInstructionSet()
 	mergeInstructionSet            = newMergeInstructionSet()
+	hybridInstructionSet           = newHybridInstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
@@ -86,6 +87,15 @@ func newMergeInstructionSet() JumpTable {
 		minStack:    minStack(0, 1),
 		maxStack:    maxStack(0, 1),
 	}
+	return validate(instructionSet)
+}
+
+// newHybridInstructionSet returns the london instructions plus PUSH0
+// (EIP-3855), activated at Altcoinchain's hybrid PoW/PoS fork. This brings the
+// EVM to Shanghai level for contract deployment (modern solc default targets).
+func newHybridInstructionSet() JumpTable {
+	instructionSet := newLondonInstructionSet()
+	enable3855(&instructionSet) // EIP-3855: PUSH0 https://eips.ethereum.org/EIPS/eip-3855
 	return validate(instructionSet)
 }
 

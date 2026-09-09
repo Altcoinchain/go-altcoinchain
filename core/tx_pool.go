@@ -77,6 +77,10 @@ var (
 	// maximum allowance of the current block.
 	ErrGasLimit = errors.New("exceeds block gas limit")
 
+	// ErrTransactionGasLimit is returned if a transaction's gas limit exceeds the
+	// per-transaction gas limit (EIP-7825: 2^24 = 16,777,216).
+	ErrTransactionGasLimit = errors.New("exceeds transaction gas limit")
+
 	// ErrNegativeValue is a sanity error to ensure no one is able to specify a
 	// transaction with a negative value.
 	ErrNegativeValue = errors.New("negative value")
@@ -604,6 +608,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Ensure the transaction doesn't exceed the current block limit gas.
 	if pool.currentMaxGas < tx.Gas() {
 		return ErrGasLimit
+	}
+	// EIP-7825: Enforce per-transaction gas limit of 2^24 (16,777,216) when FUSAKA is active
+	if pool.chainconfig.IsFusaka(pool.chain.CurrentBlock().Number()) {
+		if tx.Gas() > params.MaxTransactionGasFUSAKA {
+			return ErrTransactionGasLimit
+		}
 	}
 	// Sanity check for extremely large numbers
 	if tx.GasFeeCap().BitLen() > 256 {

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Altcoinchain Wallet
+Comment=Altcoinchain Desktop Wallet - Hybrid PoW/PoS Blockchain
+Exec=WALLET_PATH/start-altcoinchain-wallet.sh
+Icon=WALLET_PATH/icon.png
+Terminal=false
+Type=Application
+Categories=Finance;Network;
+StartupWMClass=altcoinchain-wallet
+Keywords=altcoin;wallet;crypto;blockchain;ALT;mining;

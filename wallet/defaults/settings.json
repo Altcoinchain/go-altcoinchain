@@ -1,0 +1,55 @@
+{
+  "theme": "matrix",
+  "currency": "USD",
+  "language": "en",
+  "autoStart": false,
+  "minimizeToTray": true,
+  "showTestnets": false,
+  "gasPrice": "auto",
+  "ethstats": {
+    "enabled": false,
+    "nodeName": "",
+    "server": "wss://ethstats.altcoinchain.org"
+  },
+  "rpc": {
+    "host": "127.0.0.1",
+    "port": 8332
+  },
+  "network": {
+    "chainId": 2330,
+    "networkId": 2330,
+    "name": "Altcoinchain Mainnet"
+  },
+  "themes": {
+    "matrix": {
+      "name": "Matrix",
+      "description": "Cyberpunk green/cyan neon aesthetic",
+      "primary": "#00ff41",
+      "secondary": "#00d4ff",
+      "background": "#0a0a0a",
+      "surface": "#111111",
+      "text": "#00ff41",
+      "accent": "#00ffff"
+    },
+    "dark": {
+      "name": "Dark",
+      "description": "Professional dark purple/indigo theme",
+      "primary": "#8b5cf6",
+      "secondary": "#6366f1",
+      "background": "#0f0a1a",
+      "surface": "#1a1025",
+      "text": "#e0e0e0",
+      "accent": "#a855f7"
+    },
+    "light": {
+      "name": "Light",
+      "description": "Clean light blue theme",
+      "primary": "#3b82f6",
+      "secondary": "#0ea5e9",
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "text": "#1e293b",
+      "accent": "#2563eb"
+    }
+  }
+}

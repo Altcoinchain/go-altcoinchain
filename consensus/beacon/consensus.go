@@ -445,6 +445,15 @@ func (beacon *Beacon) SetThreads(threads int) {
 	}
 }
 
+// Hashrate returns the current mining hashrate. Delegate the call
+// to the eth1 engine if it supports PoW.
+func (beacon *Beacon) Hashrate() float64 {
+	if pow, ok := beacon.ethone.(consensus.PoW); ok {
+		return pow.Hashrate()
+	}
+	return 0
+}
+
 // IsTTDReached checks if the TotalTerminalDifficulty has been surpassed on the `parentHash` block.
 // It depends on the parentHash already being stored in the database.
 // If the parentHash is not stored in the database a UnknownAncestor error is returned.

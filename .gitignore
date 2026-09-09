@@ -47,3 +47,8 @@ profile.cov
 /dashboard/assets/package-lock.json
 
 **/yarn-error.log
+geth
+
+# Electron GUI
+altcoinchain-validator-gui/node_modules/
+altcoinchain-validator-gui/dist/

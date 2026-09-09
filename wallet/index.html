@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Altcoinchain Wallet</title>
+    <script src="ethers.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #8b5cf6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #334155;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--bg-tertiary); border-radius: 3px; }
+
+        .titlebar {
+            -webkit-app-region: drag;
+            height: 38px;
+            background: var(--bg-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .titlebar-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .titlebar-logo {
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 4px;
+        }
+
+        .titlebar-controls {
+            -webkit-app-region: no-drag;
+            display: flex;
+            gap: 6px;
+        }
+
+        .titlebar-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-close { background: #ef4444; }
+        .btn-minimize { background: #f59e0b; }
+        .btn-maximize { background: #10b981; }
+
+        .app-container {
+            display: flex;
+            height: calc(100vh - 38px);
+        }
+
+        .sidebar {
+            width: 220px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .wallet-selector {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .wallet-selector:hover { border-color: var(--accent-primary); }
+
+        .wallet-name { font-weight: 600; font-size: 13px; }
+        .wallet-address { font-size: 10px; color: var(--text-muted); font-family: monospace; }
+
+        .nav-menu { flex: 1; padding: 12px; overflow-y: auto; }
+        .nav-section { margin-bottom: 16px; }
+        .nav-section-title {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            padding: 0 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .nav-item.active { background: var(--accent-primary); color: white; }
+        .nav-item svg { width: 18px; height: 18px; }
+
+        .sync-status {
+            padding: 12px;
+            border-top: 1px solid var(--border-color);
+            font-size: 11px;
+        }
+
+        .sync-bar {
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .sync-progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
+            transition: width 0.5s;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-danger);
+        }
+
+        .status-dot.online { background: var(--accent-success); box-shadow: 0 0 8px var(--accent-success); }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        .content-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title { font-size: 20px; font-weight: 700; }
+
+        .content-body { flex: 1; padding: 24px; overflow-y: auto; }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+
+        .balance-card {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+        }
+
+        .balance-label { font-size: 12px; opacity: 0.8; }
+        .balance-amount { font-size: 36px; font-weight: 700; margin: 8px 0; }
+        .balance-usd { font-size: 14px; opacity: 0.7; }
+
+        .action-buttons { display: flex; gap: 12px; margin-top: 20px; }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+        .btn-success { background: var(--accent-success); color: white; }
+        .btn-danger { background: var(--accent-danger); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .grid { display: grid; gap: 16px; }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+        .stat-card { text-align: center; padding: 16px; }
+        .stat-value { font-size: 24px; font-weight: 700; color: var(--accent-primary); }
+        .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .form-input:focus { outline: none; border-color: var(--accent-primary); }
+        .form-input::placeholder { color: var(--text-muted); }
+        .form-input.mono { font-family: 'SF Mono', Monaco, monospace; font-size: 12px; }
+
+        .token-item, .tx-item, .wallet-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .token-item:hover, .wallet-item:hover { background: var(--border-color); }
+
+        .token-icon, .tx-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .token-icon { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); }
+        .tx-icon.receive { background: rgba(16, 185, 129, 0.2); color: var(--accent-success); }
+        .tx-icon.send { background: rgba(239, 68, 68, 0.2); color: var(--accent-danger); }
+
+        .token-info, .tx-details { margin-left: 10px; flex: 1; }
+        .token-name, .tx-type { font-weight: 600; font-size: 13px; }
+        .token-symbol, .tx-address { font-size: 11px; color: var(--text-muted); }
+
+        .token-balance, .tx-amount { text-align: right; }
+        .tx-amount.positive { color: var(--accent-success); }
+        .tx-amount.negative { color: var(--accent-danger); }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s;
+        }
+
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 85vh;
+            overflow-y: auto;
+            transform: scale(0.95);
+            transition: transform 0.2s;
+        }
+
+        .modal-overlay.active .modal { transform: scale(1); }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title { font-size: 18px; font-weight: 700; }
+        .modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; }
+
+        .tabs {
+            display: flex;
+            background: var(--bg-tertiary);
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .tab.active { background: var(--accent-primary); color: white; }
+
+        .private-key-display {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--accent-warning);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 16px 0;
+            word-break: break-all;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 11px;
+            color: var(--accent-warning);
+            user-select: all;
+        }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--accent-danger);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0;
+            font-size: 12px;
+            color: var(--accent-danger);
+        }
+
+        .success-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--accent-success);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            color: var(--accent-success);
+        }
+
+        .address-display {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin: 12px 0;
+        }
+
+        .copy-hint { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .log-output {
+            background: #0a0a14;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 11px;
+            max-height: 250px;
+            overflow-y: auto;
+            color: var(--accent-success);
+        }
+
+        .unlock-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.98);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .unlock-box {
+            text-align: center;
+            max-width: 360px;
+        }
+
+        .unlock-logo {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 16px;
+            margin: 0 auto 20px;
+        }
+
+        .unlock-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+        .unlock-subtitle { color: var(--text-muted); margin-bottom: 24px; font-size: 13px; }
+
+        .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--bg-tertiary); border-top-color: var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 900px) {
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">
+        <div class="titlebar-title">
+            <div class="titlebar-logo"></div>
+            <span>Altcoinchain Wallet</span>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-btn btn-minimize" onclick="electronAPI.minimize()"></button>
+            <button class="titlebar-btn btn-maximize" onclick="electronAPI.maximize()"></button>
+            <button class="titlebar-btn btn-close" onclick="electronAPI.close()"></button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="wallet-selector" onclick="showModal('wallet-modal')">
+                    <div class="wallet-name" id="currentWalletName">Select Wallet</div>
+                    <div class="wallet-address" id="currentWalletAddress">Click to create or select</div>
+                </div>
+            </div>
+
+            <div class="nav-menu">
+                <div class="nav-section">
+                    <div class="nav-section-title">Wallet</div>
+                    <div class="nav-item active" data-page="dashboard">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        Dashboard
+                    </div>
+                    <div class="nav-item" data-page="send">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                        Send
+                    </div>
+                    <div class="nav-item" data-page="receive">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Receive
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Staking</div>
+                    <div class="nav-item" data-page="staking">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Stake ALT
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Assets</div>
+                    <div class="nav-item" data-page="tokens">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Tokens
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Network</div>
+                    <div class="nav-item" data-page="node">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"></path></svg>
+                        Node
+                    </div>
+                </div>
+            </div>
+
+            <div class="sync-status">
+                <div class="status-row">
+                    <span>Node Status</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <div class="status-dot" id="nodeStatusDot"></div>
+                        <span id="nodeStatusText">Offline</span>
+                    </div>
+                </div>
+                <div class="sync-bar">
+                    <div class="sync-progress" id="syncProgress" style="width: 0%"></div>
+                </div>
+                <div style="margin-top:6px;display:flex;justify-content:space-between;">
+                    <span id="syncBlock">Block: --</span>
+                    <span id="syncPercent">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Dashboard -->
+            <div class="page active" id="page-dashboard">
+                <div class="content-header">
+                    <h1 class="page-title">Dashboard</h1>
+                </div>
+                <div class="content-body">
+                    <div class="card balance-card">
+                        <div class="balance-label">Total Balance</div>
+                        <div class="balance-amount" id="totalBalance">0.0000 ALT</div>
+                        <div class="balance-usd" id="balanceUsd">≈ $0.00 USD</div>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary" onclick="navigateTo('send')">Send</button>
+                            <button class="btn btn-secondary" onclick="navigateTo('receive')">Receive</button>
+                            <button class="btn btn-primary" onclick="navigateTo('staking')">Stake</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-4">
+                        <div class="card stat-card">
+                            <div class="stat-value" id="stakedAmount">0</div>
+                            <div class="stat-label">Staked ALT</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="pendingRewards">0</div>
+                            <div class="stat-label">Pending Rewards</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="networkBlock">--</div>
+                            <div class="stat-label">Network Block</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="peerCount">--</div>
+                            <div class="stat-label">Peers</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Recent Activity</div>
+                        <div id="txList">
+                            <div class="empty-state">No transactions yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Send -->
+            <div class="page" id="page-send">
+                <div class="content-header">
+                    <h1 class="page-title">Send ALT</h1>
+                </div>
+                <div class="content-body">
+                    <div class="card" style="max-width:500px;">
+                        <div class="form-group">
+                            <label class="form-label">Recipient Address</label>
+                            <input type="text" class="form-input mono" id="sendTo" placeholder="0x...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Amount (ALT)</label>
+                            <input type="text" class="form-input" id="sendAmount" placeholder="0.0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-input" id="sendPassword" placeholder="Wallet password">
+                        </div>
+                        <button class="btn btn-primary" style="width:100%;" onclick="sendTransaction()" id="sendBtn">
+                            Send Transaction
+                        </button>
+                        <div id="sendResult" style="margin-top:12px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Receive -->
+            <div class="page" id="page-receive">
+                <div class="content-header">
+                    <h1 class="page-title">Receive ALT</h1>
+                </div>
+                <div class="content-body">
+                    <div class="card" style="max-width:400px;text-align:center;">
+                        <div class="card-title">Your Address</div>
+                        <div class="address-display" id="receiveAddress" onclick="copyToClipboard(this.textContent)">
+                            Select a wallet first
+                        </div>
+                        <div class="copy-hint">Click to copy</div>
+                        <button class="btn btn-primary" style="margin-top:16px;" onclick="copyToClipboard(document.getElementById('receiveAddress').textContent)">
+                            Copy Address
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staking -->
+            <div class="page" id="page-staking">
+                <div class="content-header">
+                    <h1 class="page-title">Stake ALT</h1>
+                </div>
+                <div class="content-body">
+                    <div class="grid grid-4" style="margin-bottom:20px;">
+                        <div class="card stat-card">
+                            <div class="stat-value" id="yourStake">0</div>
+                            <div class="stat-label">Your Stake</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="yourRewards">0</div>
+                            <div class="stat-label">Rewards</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="totalStaked">0</div>
+                            <div class="stat-label">Total Staked</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="validatorCount">0</div>
+                            <div class="stat-label">Validators</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <div class="card-title">Stake ALT (min 32)</div>
+                            <div class="form-group">
+                                <input type="text" class="form-input" id="stakeAmount" placeholder="32">
+                            </div>
+                            <div class="form-group">
+                                <input type="password" class="form-input" id="stakePassword" placeholder="Wallet password">
+                            </div>
+                            <button class="btn btn-success" style="width:100%;" onclick="stakeALT()">Stake</button>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Manage</div>
+                            <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="claimRewards()">Claim Rewards</button>
+                            <div class="form-group" style="margin-top:12px;">
+                                <input type="text" class="form-input" id="unstakeAmount" placeholder="Amount to unstake">
+                            </div>
+                            <button class="btn btn-danger" style="width:100%;" onclick="requestUnstake()">Request Unstake</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tokens -->
+            <div class="page" id="page-tokens">
+                <div class="content-header">
+                    <h1 class="page-title">Tokens</h1>
+                    <button class="btn btn-primary btn-sm" onclick="showModal('token-modal')">Add Token</button>
+                </div>
+                <div class="content-body">
+                    <div class="card">
+                        <div id="tokenList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Node -->
+            <div class="page" id="page-node">
+                <div class="content-header">
+                    <h1 class="page-title">Node Control</h1>
+                </div>
+                <div class="content-body">
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <div class="card-title">Node Status</div>
+                            <div class="grid grid-2" style="margin-bottom:16px;">
+                                <div class="stat-card" style="padding:12px;">
+                                    <div class="stat-value" id="nodeBlock">--</div>
+                                    <div class="stat-label">Block</div>
+                                </div>
+                                <div class="stat-card" style="padding:12px;">
+                                    <div class="stat-value" id="nodePeers">--</div>
+                                    <div class="stat-label">Peers</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                <button class="btn btn-success" style="flex:1;" onclick="startNode()">Start</button>
+                                <button class="btn btn-danger" style="flex:1;" onclick="stopNode()">Stop</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">RPC Connection</div>
+                            <div class="form-group">
+                                <input type="text" class="form-input" id="rpcUrl" value="http://127.0.0.1:8545">
+                            </div>
+                            <button class="btn btn-primary" style="width:100%;" onclick="connectRPC()">Connect</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Logs</div>
+                        <div class="log-output" id="nodeLogs">Waiting for node...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wallet Modal -->
+    <div class="modal-overlay" id="wallet-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Wallets</h2>
+                <button class="modal-close" onclick="hideModal('wallet-modal')">&times;</button>
+            </div>
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('wallets')">My Wallets</div>
+                <div class="tab" onclick="switchTab('create')">Create</div>
+                <div class="tab" onclick="switchTab('import')">Import</div>
+            </div>
+            <div id="tab-wallets">
+                <div id="walletList"></div>
+            </div>
+            <div id="tab-create" style="display:none;">
+                <div class="form-group">
+                    <label class="form-label">Wallet Name</label>
+                    <input type="text" class="form-input" id="newWalletName" placeholder="My Wallet">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password (to encrypt wallet)</label>
+                    <input type="password" class="form-input" id="newWalletPassword" placeholder="Strong password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-input" id="newWalletPassword2" placeholder="Confirm password">
+                </div>
+                <button class="btn btn-primary" style="width:100%;" onclick="createNewWallet()">Create Wallet</button>
+            </div>
+            <div id="tab-import" style="display:none;">
+                <div class="form-group">
+                    <label class="form-label">Private Key (with or without 0x)</label>
+                    <input type="password" class="form-input mono" id="importPrivateKey" placeholder="Private key">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Wallet Name</label>
+                    <input type="text" class="form-input" id="importWalletName" placeholder="Imported Wallet">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="importPassword" placeholder="Password to encrypt">
+                </div>
+                <button class="btn btn-primary" style="width:100%;" onclick="importWalletFromKey()">Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Wallet Created Modal -->
+    <div class="modal-overlay" id="newwallet-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Wallet Created!</h2>
+                <button class="modal-close" onclick="hideModal('newwallet-modal')">&times;</button>
+            </div>
+            <div class="success-box">Wallet created successfully!</div>
+            <div class="form-group">
+                <label class="form-label">Address</label>
+                <div class="address-display" id="newWalletAddress" onclick="copyToClipboard(this.textContent)"></div>
+            </div>
+            <div class="warning-box">
+                <strong>IMPORTANT:</strong> Save your private key NOW! It will NOT be shown again.
+            </div>
+            <div class="form-group">
+                <label class="form-label">Private Key (click to copy)</label>
+                <div class="private-key-display" id="newWalletPrivateKey" onclick="copyToClipboard(this.textContent)"></div>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="copyToClipboard(document.getElementById('newWalletPrivateKey').textContent)">Copy Key</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="savePrivateKeyToFile()">Save to File</button>
+            </div>
+            <button class="btn btn-success" style="width:100%;margin-top:12px;" onclick="hideModal('newwallet-modal');loadWallets();">Done - I've Saved It</button>
+        </div>
+    </div>
+
+    <!-- Add Token Modal -->
+    <div class="modal-overlay" id="token-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Token</h2>
+                <button class="modal-close" onclick="hideModal('token-modal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Contract Address</label>
+                <input type="text" class="form-input mono" id="tokenAddress" placeholder="0x...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Symbol</label>
+                <input type="text" class="form-input" id="tokenSymbol" placeholder="TOKEN">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Decimals</label>
+                <input type="number" class="form-input" id="tokenDecimals" value="18">
+            </div>
+            <button class="btn btn-primary" style="width:100%;" onclick="addToken()">Add Token</button>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const STAKING_CONTRACT = '0x87f0bd245507e5a94cdb03472501a9f522a9e0f1';
+        const CHAIN_ID = 2330;
+        const MIN_STAKE = 32;
+
+        // State
+        let rpcUrl = 'http://127.0.0.1:8545';
+        let provider = null;
+        let currentWallet = null;
+        let walletData = null;
+        let tokens = [];
+        let nodeOnline = false;
+
+        // Function signatures
+        const SIGS = {
+            'getStake': '0xe8e59709',
+            'getPendingRewards': '0xf6ed2017',
+            'totalStaked': '0x817b1cd2',
+            'getValidatorCount': '0x7071688a',
+            'stake': '0x3a4b66f1',
+            'requestWithdrawal': '0x9ee679e8',
+            'claimRewards': '0x372500ab'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            initNavigation();
+            await loadWallets();
+            await loadTokens();
+            connectRPC();
+            startPolling();
+
+            if (window.electronAPI) {
+                electronAPI.onNodeStatus(status => {
+                    nodeOnline = status.running;
+                    updateNodeUI();
+                });
+                electronAPI.onNodeLog(log => appendLog(log));
+                electronAPI.onConnectRpc(url => {
+                    document.getElementById('rpcUrl').value = url;
+                    rpcUrl = url;
+                    connectRPC();
+                });
+            }
+        });
+
+        // Navigation
+        function initNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => navigateTo(item.dataset.page));
+            });
+        }
+
+        function navigateTo(page) {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+            document.getElementById(`page-${page}`)?.classList.add('active');
+        }
+
+        // Tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('[id^="tab-"]').forEach(c => c.style.display = 'none');
+            document.getElementById(`tab-${tab}`).style.display = 'block';
+        }
+
+        // Modal
+        function showModal(id) { document.getElementById(id).classList.add('active'); }
+        function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // Copy
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard!');
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#10b981;color:white;padding:10px 20px;border-radius:8px;z-index:9999;font-size:13px;';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        // RPC
+        async function rpcCall(method, params = []) {
+            try {
+                const res = await fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 })
+                });
+                const data = await res.json();
+                return data.error ? null : data.result;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function connectRPC() {
+            const input = document.getElementById('rpcUrl');
+            if (input) rpcUrl = input.value;
+
+            try {
+                provider = new ethers.JsonRpcProvider(rpcUrl);
+                const network = await provider.getNetwork();
+                if (Number(network.chainId) === CHAIN_ID) {
+                    nodeOnline = true;
+                    updateNodeUI();
+                    updateDashboard();
+                    showToast('Connected to Altcoinchain');
+                }
+            } catch (e) {
+                console.log('RPC connection failed:', e);
+            }
+        }
+
+        function startPolling() {
+            setInterval(updateDashboard, 5000);
+        }
+
+        async function updateDashboard() {
+            const block = await rpcCall('eth_blockNumber');
+            if (block) {
+                const blockNum = parseInt(block, 16);
+                document.getElementById('networkBlock').textContent = blockNum.toLocaleString();
+                document.getElementById('nodeBlock').textContent = blockNum.toLocaleString();
+                document.getElementById('syncBlock').textContent = `Block: ${blockNum.toLocaleString()}`;
+
+                // Sync progress (assuming 7M is target for now)
+                const target = 7000000;
+                const pct = Math.min(100, (blockNum / target) * 100);
+                document.getElementById('syncProgress').style.width = pct + '%';
+                document.getElementById('syncPercent').textContent = pct.toFixed(1) + '%';
+            }
+
+            const peers = await rpcCall('net_peerCount');
+            if (peers) {
+                const peerNum = parseInt(peers, 16);
+                document.getElementById('peerCount').textContent = peerNum;
+                document.getElementById('nodePeers').textContent = peerNum;
+            }
+
+            if (currentWallet) {
+                await updateBalance();
+                await updateStakingInfo();
+            }
+
+            renderTokenList();
+        }
+
+        async function updateBalance() {
+            if (!currentWallet) return;
+            try {
+                const balance = await rpcCall('eth_getBalance', [currentWallet.address, 'latest']);
+                if (balance) {
+                    const bal = parseFloat(ethers.formatEther(balance));
+                    document.getElementById('totalBalance').textContent = bal.toFixed(4) + ' ALT';
+                }
+            } catch (e) {}
+        }
+
+        async function updateStakingInfo() {
+            if (!currentWallet) return;
+            const addr = currentWallet.address.slice(2).padStart(64, '0');
+
+            try {
+                const stake = await rpcCall('eth_call', [{ to: STAKING_CONTRACT, data: SIGS.getStake + addr }, 'latest']);
+                if (stake && stake !== '0x') {
+                    const s = parseFloat(ethers.formatEther(stake));
+                    document.getElementById('stakedAmount').textContent = s.toFixed(2);
+                    document.getElementById('yourStake').textContent = s.toFixed(2);
+                }
+
+                const rewards = await rpcCall('eth_call', [{ to: STAKING_CONTRACT, data: SIGS.getPendingRewards + addr }, 'latest']);
+                if (rewards && rewards !== '0x') {
+                    const r = parseFloat(ethers.formatEther(rewards));
+                    document.getElementById('pendingRewards').textContent = r.toFixed(4);
+                    document.getElementById('yourRewards').textContent = r.toFixed(4);
+                }
+
+                const total = await rpcCall('eth_call', [{ to: STAKING_CONTRACT, data: SIGS.totalStaked }, 'latest']);
+                if (total && total !== '0x') {
+                    document.getElementById('totalStaked').textContent = parseFloat(ethers.formatEther(total)).toFixed(0);
+                }
+
+                const count = await rpcCall('eth_call', [{ to: STAKING_CONTRACT, data: SIGS.getValidatorCount }, 'latest']);
+                if (count && count !== '0x') {
+                    document.getElementById('validatorCount').textContent = parseInt(count, 16);
+                }
+            } catch (e) {}
+        }
+
+        function updateNodeUI() {
+            const dot = document.getElementById('nodeStatusDot');
+            const text = document.getElementById('nodeStatusText');
+            if (nodeOnline) {
+                dot.classList.add('online');
+                text.textContent = 'Online';
+            } else {
+                dot.classList.remove('online');
+                text.textContent = 'Offline';
+            }
+        }
+
+        // Wallet functions
+        async function loadWallets() {
+            if (!window.electronAPI) return;
+            const wallets = await electronAPI.getWallets();
+            const container = document.getElementById('walletList');
+
+            if (wallets.length === 0) {
+                container.innerHTML = '<div class="empty-state">No wallets. Create one!</div>';
+                return;
+            }
+
+            container.innerHTML = wallets.map(w => `
+                <div class="wallet-item" onclick="selectWallet('${w.filename}')">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="token-icon">${(w.name || 'W')[0].toUpperCase()}</div>
+                        <div>
+                            <div class="token-name">${w.name || 'Wallet'}</div>
+                            <div class="token-symbol">${w.address ? w.address.slice(0, 8) + '...' + w.address.slice(-6) : 'Unknown'}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function selectWallet(filename) {
+            if (!window.electronAPI) return;
+            const result = await electronAPI.loadWallet(filename);
+            if (result.success) {
+                walletData = result.content;
+                currentWallet = {
+                    address: walletData.address.startsWith('0x') ? walletData.address : '0x' + walletData.address,
+                    name: walletData.name || filename
+                };
+
+                document.getElementById('currentWalletName').textContent = currentWallet.name;
+                document.getElementById('currentWalletAddress').textContent = currentWallet.address.slice(0, 8) + '...' + currentWallet.address.slice(-6);
+                document.getElementById('receiveAddress').textContent = currentWallet.address;
+
+                hideModal('wallet-modal');
+                updateDashboard();
+            }
+        }
+
+        async function createNewWallet() {
+            const name = document.getElementById('newWalletName').value.trim() || 'My Wallet';
+            const password = document.getElementById('newWalletPassword').value;
+            const password2 = document.getElementById('newWalletPassword2').value;
+
+            if (!password || password.length < 6) {
+                showToast('Password must be at least 6 characters');
+                return;
+            }
+
+            if (password !== password2) {
+                showToast('Passwords do not match');
+                return;
+            }
+
+            try {
+                // Create random wallet using ethers.js
+                const wallet = ethers.Wallet.createRandom();
+
+                // Encrypt to keystore format
+                const keystore = await wallet.encrypt(password);
+                const keystoreObj = JSON.parse(keystore);
+                keystoreObj.name = name;
+
+                // Save
+                const filename = `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}.json`;
+                await electronAPI.saveWallet(filename, keystoreObj);
+
+                // Show the private key
+                document.getElementById('newWalletAddress').textContent = wallet.address;
+                document.getElementById('newWalletPrivateKey').textContent = wallet.privateKey;
+
+                // Clear form
+                document.getElementById('newWalletName').value = '';
+                document.getElementById('newWalletPassword').value = '';
+                document.getElementById('newWalletPassword2').value = '';
+
+                hideModal('wallet-modal');
+                showModal('newwallet-modal');
+
+            } catch (e) {
+                showToast('Error creating wallet: ' + e.message);
+            }
+        }
+
+        async function importWalletFromKey() {
+            let privateKey = document.getElementById('importPrivateKey').value.trim();
+            const name = document.getElementById('importWalletName').value.trim() || 'Imported Wallet';
+            const password = document.getElementById('importPassword').value;
+
+            if (!privateKey) {
+                showToast('Please enter a private key');
+                return;
+            }
+
+            if (!password || password.length < 6) {
+                showToast('Password must be at least 6 characters');
+                return;
+            }
+
+            // Add 0x if missing
+            if (!privateKey.startsWith('0x')) {
+                privateKey = '0x' + privateKey;
+            }
+
+            try {
+                const wallet = new ethers.Wallet(privateKey);
+                const keystore = await wallet.encrypt(password);
+                const keystoreObj = JSON.parse(keystore);
+                keystoreObj.name = name;
+
+                const filename = `${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}.json`;
+                await electronAPI.saveWallet(filename, keystoreObj);
+
+                // Clear form
+                document.getElementById('importPrivateKey').value = '';
+                document.getElementById('importWalletName').value = '';
+                document.getElementById('importPassword').value = '';
+
+                hideModal('wallet-modal');
+                await loadWallets();
+                showToast('Wallet imported: ' + wallet.address.slice(0, 10) + '...');
+
+            } catch (e) {
+                showToast('Invalid private key: ' + e.message);
+            }
+        }
+
+        async function savePrivateKeyToFile() {
+            const pk = document.getElementById('newWalletPrivateKey').textContent;
+            const addr = document.getElementById('newWalletAddress').textContent;
+
+            if (window.electronAPI) {
+                const result = await electronAPI.showSaveDialog({
+                    title: 'Save Private Key',
+                    defaultPath: `altcoinchain-privatekey-${addr.slice(0, 8)}.txt`,
+                    filters: [{ name: 'Text Files', extensions: ['txt'] }]
+                });
+
+                if (!result.canceled && result.filePath) {
+                    await electronAPI.writeFile(result.filePath, `Altcoinchain Wallet Backup\n\nAddress: ${addr}\nPrivate Key: ${pk}\n\nKEEP THIS FILE SAFE AND SECRET!`);
+                    showToast('Private key saved!');
+                }
+            }
+        }
+
+        // Decrypt wallet to get signer
+        async function getWalletSigner(password) {
+            if (!walletData) throw new Error('No wallet selected');
+
+            const wallet = await ethers.Wallet.fromEncryptedJson(JSON.stringify(walletData), password);
+            return wallet.connect(provider);
+        }
+
+        // Send transaction
+        async function sendTransaction() {
+            const to = document.getElementById('sendTo').value.trim();
+            const amount = document.getElementById('sendAmount').value.trim();
+            const password = document.getElementById('sendPassword').value;
+            const resultDiv = document.getElementById('sendResult');
+
+            if (!currentWallet) {
+                resultDiv.innerHTML = '<div class="warning-box">Please select a wallet first</div>';
+                return;
+            }
+
+            if (!to || !ethers.isAddress(to)) {
+                resultDiv.innerHTML = '<div class="warning-box">Invalid recipient address</div>';
+                return;
+            }
+
+            if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+                resultDiv.innerHTML = '<div class="warning-box">Invalid amount</div>';
+                return;
+            }
+
+            if (!password) {
+                resultDiv.innerHTML = '<div class="warning-box">Please enter wallet password</div>';
+                return;
+            }
+
+            document.getElementById('sendBtn').disabled = true;
+            resultDiv.innerHTML = '<div class="loading"></div> Signing transaction...';
+
+            try {
+                const signer = await getWalletSigner(password);
+                const tx = await signer.sendTransaction({
+                    to: to,
+                    value: ethers.parseEther(amount)
+                });
+
+                resultDiv.innerHTML = `<div class="success-box">Transaction sent!<br><small>${tx.hash}</small></div>`;
+
+                // Clear form
+                document.getElementById('sendTo').value = '';
+                document.getElementById('sendAmount').value = '';
+                document.getElementById('sendPassword').value = '';
+
+                // Wait for confirmation
+                await tx.wait();
+                updateBalance();
+
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="warning-box">${e.message}</div>`;
+            }
+
+            document.getElementById('sendBtn').disabled = false;
+        }
+
+        // Staking
+        async function stakeALT() {
+            const amount = document.getElementById('stakeAmount').value.trim();
+            const password = document.getElementById('stakePassword').value;
+
+            if (!currentWallet) {
+                showToast('Select a wallet first');
+                return;
+            }
+
+            if (!amount || parseFloat(amount) < MIN_STAKE) {
+                showToast(`Minimum stake is ${MIN_STAKE} ALT`);
+                return;
+            }
+
+            if (!password) {
+                showToast('Enter wallet password');
+                return;
+            }
+
+            try {
+                const signer = await getWalletSigner(password);
+                const tx = await signer.sendTransaction({
+                    to: STAKING_CONTRACT,
+                    value: ethers.parseEther(amount),
+                    data: SIGS.stake
+                });
+
+                showToast('Staking transaction sent!');
+                document.getElementById('stakeAmount').value = '';
+                document.getElementById('stakePassword').value = '';
+
+                await tx.wait();
+                updateDashboard();
+
+            } catch (e) {
+                showToast('Error: ' + e.message);
+            }
+        }
+
+        async function claimRewards() {
+            const password = prompt('Enter wallet password:');
+            if (!password) return;
+
+            try {
+                const signer = await getWalletSigner(password);
+                const tx = await signer.sendTransaction({
+                    to: STAKING_CONTRACT,
+                    data: SIGS.claimRewards
+                });
+
+                showToast('Claim transaction sent!');
+                await tx.wait();
+                updateDashboard();
+
+            } catch (e) {
+                showToast('Error: ' + e.message);
+            }
+        }
+
+        async function requestUnstake() {
+            const amount = document.getElementById('unstakeAmount').value.trim();
+            if (!amount || parseFloat(amount) <= 0) {
+                showToast('Enter amount to unstake');
+                return;
+            }
+
+            const password = prompt('Enter wallet password:');
+            if (!password) return;
+
+            try {
+                const signer = await getWalletSigner(password);
+                const amountHex = ethers.toBeHex(ethers.parseEther(amount)).slice(2).padStart(64, '0');
+                const tx = await signer.sendTransaction({
+                    to: STAKING_CONTRACT,
+                    data: SIGS.requestWithdrawal + amountHex
+                });
+
+                showToast('Unstake request sent!');
+                document.getElementById('unstakeAmount').value = '';
+                await tx.wait();
+                updateDashboard();
+
+            } catch (e) {
+                showToast('Error: ' + e.message);
+            }
+        }
+
+        // Tokens
+        async function loadTokens() {
+            if (window.electronAPI) {
+                tokens = await electronAPI.getTokens() || [];
+            }
+            renderTokenList();
+        }
+
+        function renderTokenList() {
+            const container = document.getElementById('tokenList');
+            let html = `
+                <div class="token-item">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="token-icon">ALT</div>
+                        <div>
+                            <div class="token-name">Altcoin</div>
+                            <div class="token-symbol">Native</div>
+                        </div>
+                    </div>
+                    <div class="token-balance">
+                        <div style="font-weight:600;">${document.getElementById('totalBalance')?.textContent || '0 ALT'}</div>
+                    </div>
+                </div>
+            `;
+
+            tokens.forEach(t => {
+                html += `
+                    <div class="token-item">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="token-icon">${t.symbol.slice(0, 2)}</div>
+                            <div>
+                                <div class="token-name">${t.symbol}</div>
+                                <div class="token-symbol">${t.address.slice(0, 10)}...</div>
+                            </div>
+                        </div>
+                        <div class="token-balance">
+                            <div style="font-weight:600;">0.00</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function addToken() {
+            const address = document.getElementById('tokenAddress').value.trim();
+            const symbol = document.getElementById('tokenSymbol').value.trim();
+            const decimals = parseInt(document.getElementById('tokenDecimals').value) || 18;
+
+            if (!address || !ethers.isAddress(address)) {
+                showToast('Invalid contract address');
+                return;
+            }
+
+            if (!symbol) {
+                showToast('Enter token symbol');
+                return;
+            }
+
+            tokens.push({ address, symbol, decimals });
+            if (window.electronAPI) {
+                await electronAPI.saveTokens(tokens);
+            }
+
+            document.getElementById('tokenAddress').value = '';
+            document.getElementById('tokenSymbol').value = '';
+            document.getElementById('tokenDecimals').value = '18';
+
+            hideModal('token-modal');
+            renderTokenList();
+            showToast('Token added!');
+        }
+
+        // Node control
+        async function startNode() {
+            if (window.electronAPI) {
+                await electronAPI.startNode();
+                showToast('Starting node...');
+            }
+        }
+
+        async function stopNode() {
+            if (window.electronAPI) {
+                await electronAPI.stopNode();
+                showToast('Stopping node...');
+            }
+        }
+
+        function appendLog(log) {
+            const container = document.getElementById('nodeLogs');
+            container.innerHTML += log.replace(/\n/g, '<br>');
+            container.scrollTop = container.scrollHeight;
+
+            // Limit size
+            if (container.innerHTML.length > 50000) {
+                container.innerHTML = container.innerHTML.slice(-30000);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Altcoinchain Node
+Comment=Altcoinchain Blockchain Node - Hybrid PoW/PoS
+Exec=INSTALL_PATH/start-altcoinchain.sh
+Icon=INSTALL_PATH/icon.png
+Terminal=true
+Type=Application
+Categories=Finance;Network;
+StartupWMClass=altcoinchain
+Keywords=altcoin;blockchain;crypto;node;mining;

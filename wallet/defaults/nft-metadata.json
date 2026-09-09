@@ -1,0 +1,87 @@
+{
+  "0xb92c4e283b783f5d0d7cb3b22c4c7c9fc9529216": {
+    "1": {
+      "name": "Mining Game Free Badge",
+      "description": "A free badge for Mining Game participants",
+      "image": "https://web.archive.org/web/20250308122104/https://api.mining.game/1.png",
+      "animation_url": "https://web.archive.org/web/20250308122104if_/https://api.mining.game/1.glb",
+      "external_url": "https://web.archive.org/web/20220327074932/https://mining.game/nfts/free/",
+      "attributes": [
+        {"trait_type": "Type", "value": "Badge"},
+        {"trait_type": "Rarity", "value": "Common"},
+        {"trait_type": "Collection", "value": "Mining Game"},
+        {"trait_type": "Hash Power", "value": "0"},
+        {"trait_type": "Energy Efficiency", "value": "N/A"}
+      ]
+    },
+    "2": {
+      "name": "Genesis Badge",
+      "description": "Genesis badge for early Mining Game supporters",
+      "image": "https://web.archive.org/web/20250308122104/https://api.mining.game/2.png",
+      "image_small": "https://web.archive.org/web/20250308122104/https://api.mining.game/2.jpg",
+      "animation_url": "https://web.archive.org/web/20250308122104/https://api.mining.game/2.mp4",
+      "external_url": "https://web.archive.org/web/20250308122104/https://mining.game/nfts/genesis-badge/",
+      "attributes": [
+        {"trait_type": "Type", "value": "Badge"},
+        {"trait_type": "Rarity", "value": "Rare"},
+        {"trait_type": "Collection", "value": "Mining Game"},
+        {"trait_type": "Edition", "value": "Genesis"},
+        {"trait_type": "Hash Power", "value": "0"},
+        {"trait_type": "Energy Efficiency", "value": "N/A"}
+      ]
+    },
+    "3": {
+      "name": "Kirtex XL1 CPU",
+      "description": "A virtual CPU miner for the Mining Game",
+      "image": "https://web.archive.org/web/20250308122104/https://api.mining.game/3.png",
+      "image_small": "https://web.archive.org/web/20250308122104/https://api.mining.game/3.jpg",
+      "animation_url": "https://web.archive.org/web/20250308122104/https://api.mining.game/3.glb",
+      "external_url": "https://web.archive.org/web/20250308122104/https://mining.game/nfts/kirtex-xl1-cpu/",
+      "attributes": [
+        {"trait_type": "Type", "value": "CPU"},
+        {"trait_type": "Rarity", "value": "Common"},
+        {"trait_type": "Collection", "value": "Mining Game"},
+        {"trait_type": "Brand", "value": "Kirtex"},
+        {"trait_type": "Model", "value": "XL1"},
+        {"trait_type": "Hash Power", "value": "100 H/s"},
+        {"trait_type": "Energy Efficiency", "value": "10 W"},
+        {"trait_type": "Cores", "value": "4"}
+      ]
+    },
+    "4": {
+      "name": "Oblivia TX120 GPU",
+      "description": "A virtual GPU miner for the Mining Game",
+      "image": "https://web.archive.org/web/20250308122106/https://api.mining.game/4.png",
+      "image_small": "https://web.archive.org/web/20250308122106/https://api.mining.game/4.jpg",
+      "animation_url": "https://web.archive.org/web/20250308122106/https://api.mining.game/4.glb",
+      "external_url": "https://web.archive.org/web/20250308122106/https://mining.game/nfts/oblivia-tx120-gpu/",
+      "attributes": [
+        {"trait_type": "Type", "value": "GPU"},
+        {"trait_type": "Rarity", "value": "Uncommon"},
+        {"trait_type": "Collection", "value": "Mining Game"},
+        {"trait_type": "Brand", "value": "Oblivia"},
+        {"trait_type": "Model", "value": "TX120"},
+        {"trait_type": "Hash Power", "value": "500 H/s"},
+        {"trait_type": "Energy Efficiency", "value": "50 W"},
+        {"trait_type": "VRAM", "value": "8 GB"}
+      ]
+    },
+    "5": {
+      "name": "MAD GP50 GPU",
+      "description": "A high-performance virtual GPU miner for the Mining Game",
+      "image": "https://web.archive.org/web/20220418080358/https://api.mining.game/5.png",
+      "animation_url": "https://web.archive.org/web/20220418080358/https://api.mining.game/5.glb",
+      "external_url": "https://web.archive.org/web/20220418080358/https://mining.game/mad-gp50-gpu/",
+      "attributes": [
+        {"trait_type": "Type", "value": "GPU"},
+        {"trait_type": "Rarity", "value": "Rare"},
+        {"trait_type": "Collection", "value": "Mining Game"},
+        {"trait_type": "Brand", "value": "MAD"},
+        {"trait_type": "Model", "value": "GP50"},
+        {"trait_type": "Hash Power", "value": "1000 H/s"},
+        {"trait_type": "Energy Efficiency", "value": "75 W"},
+        {"trait_type": "VRAM", "value": "16 GB"}
+      ]
+    }
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "name": "altcoinchain-wallet",
+  "version": "2.0.0",
+  "description": "Altcoinchain Desktop Wallet - Hybrid PoW/PoS Blockchain",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:linux": "electron-builder --linux",
+    "build:win": "electron-builder --win",
+    "build:all": "electron-builder --linux --win",
+    "dist": "electron-builder --linux deb --win nsis"
+  },
+  "author": "Altcoinchain",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nucash-mining/altcoinchain-wallet"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.0.0",
+    "png-to-ico": "^3.0.1"
+  },
+  "build": {
+    "appId": "org.altcoinchain.wallet",
+    "productName": "Altcoinchain Wallet",
+    "copyright": "Copyright © 2025 Altcoinchain",
+    "directories": {
+      "output": "dist",
+      "buildResources": "."
+    },
+    "files": [
+      "build/**/*",
+      "main.js",
+      "preload.js",
+      "icon.png",
+      "defaults/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../geth",
+        "to": "geth",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../geth.exe",
+        "to": "geth.exe",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../genesis.json",
+        "to": "genesis.json"
+      },
+      {
+        "from": "../bootnodes.txt",
+        "to": "bootnodes.txt"
+      },
+      {
+        "from": "defaults",
+        "to": "defaults"
+      }
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Finance",
+      "icon": "icon.png",
+      "desktop": {
+        "Name": "Altcoinchain Wallet",
+        "Comment": "Altcoinchain Desktop Wallet - Hybrid PoW/PoS",
+        "Categories": "Finance;Network;",
+        "Keywords": "altcoin;crypto;blockchain;wallet;ALT;"
+      },
+      "maintainer": "Altcoinchain <info@altcoinchain.org>"
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ],
+      "afterInstall": "scripts/postinst.sh",
+      "afterRemove": "scripts/postrm.sh"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.ico",
+      "publisherName": "Altcoinchain"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "installerHeaderIcon": "icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Altcoinchain Wallet",
+      "runAfterFinish": true,
+      "include": "scripts/installer.nsh"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.finance",
+      "icon": "icon.icns"
+    }
+  }
+}

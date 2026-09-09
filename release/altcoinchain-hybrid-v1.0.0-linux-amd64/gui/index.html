@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Altcoinchain Node Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #333;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        .logo span {
+            color: #ff6b6b;
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4444;
+        }
+        .status-dot.connected {
+            background: #44ff44;
+            box-shadow: 0 0 10px #44ff44;
+        }
+        .rpc-input {
+            background: #2a2a4a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            width: 300px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+        .btn.danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #cc4444 100%);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .card h3 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .stat:last-child {
+            border-bottom: none;
+        }
+        .stat-label {
+            color: #888;
+        }
+        .stat-value {
+            font-weight: bold;
+            color: #fff;
+        }
+        .stat-value.highlight {
+            color: #00d4ff;
+        }
+        .progress-bar {
+            background: #333;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #00d4ff 0%, #00ff88 100%);
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+        .staking-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        .input-group input {
+            flex: 1;
+            background: #2a2a4a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 12px 15px;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .validators-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .validator-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .validator-address {
+            font-family: monospace;
+            font-size: 14px;
+            color: #00d4ff;
+        }
+        .validator-stake {
+            font-weight: bold;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #888;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: #00d4ff;
+            color: #000;
+        }
+        .log-output {
+            background: #0a0a1a;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+            color: #0f0;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+        }
+        .log-entry.error {
+            color: #ff4444;
+        }
+        .log-entry.info {
+            color: #00d4ff;
+        }
+        .fork-countdown {
+            text-align: center;
+            padding: 30px;
+        }
+        .countdown-number {
+            font-size: 48px;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        .countdown-label {
+            color: #888;
+            margin-top: 10px;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .syncing {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Altcoin<span>chain</span> Dashboard</div>
+            <div class="connection-status">
+                <input type="text" class="rpc-input" id="rpcUrl" value="http://127.0.0.1:8545" placeholder="RPC URL">
+                <button class="btn" onclick="connect()">Connect</button>
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Disconnected</span>
+            </div>
+        </header>
+
+        <div class="grid">
+            <!-- Network Status -->
+            <div class="card">
+                <h3>Network Status</h3>
+                <div class="stat">
+                    <span class="stat-label">Chain ID</span>
+                    <span class="stat-value" id="chainId">--</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Current Block</span>
+                    <span class="stat-value highlight" id="blockNumber">--</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Peers</span>
+                    <span class="stat-value" id="peerCount">--</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Sync Status</span>
+                    <span class="stat-value" id="syncStatus">--</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Gas Price</span>
+                    <span class="stat-value" id="gasPrice">--</span>
+                </div>
+            </div>
+
+            <!-- Hybrid Fork Status -->
+            <div class="card">
+                <h3>Hybrid PoW/PoS Fork</h3>
+                <div class="fork-countdown">
+                    <div class="countdown-number" id="blocksUntilFork">--</div>
+                    <div class="countdown-label">blocks until fork (block 7,000,000)</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="forkProgress" style="width: 0%"></div>
+                </div>
+                <div class="stat" style="margin-top: 15px;">
+                    <span class="stat-label">Hybrid Active</span>
+                    <span class="stat-value" id="hybridActive">--</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Staking Contract</span>
+                    <span class="stat-value" id="stakingContract" style="font-size: 11px;">--</span>
+                </div>
+            </div>
+
+            <!-- Account Info -->
+            <div class="card">
+                <h3>Your Account</h3>
+                <div class="stat">
+                    <span class="stat-label">Address</span>
+                    <span class="stat-value" id="accountAddress" style="font-size: 12px;">--</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Balance</span>
+                    <span class="stat-value highlight" id="accountBalance">-- ALT</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Staked</span>
+                    <span class="stat-value" id="stakedAmount">-- ALT</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Pending Rewards</span>
+                    <span class="stat-value highlight" id="pendingRewards">-- ALT</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Validator Status</span>
+                    <span class="stat-value" id="validatorStatus">--</span>
+                </div>
+            </div>
+
+            <!-- Staking Actions -->
+            <div class="card">
+                <h3>Staking Actions</h3>
+                <div class="staking-form">
+                    <div class="input-group">
+                        <input type="number" id="stakeAmount" placeholder="Amount to stake (min 32 ALT)">
+                        <button class="btn" onclick="stake()">Stake</button>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="unstakeAmount" placeholder="Amount to unstake">
+                        <button class="btn danger" onclick="requestWithdrawal()">Unstake</button>
+                    </div>
+                    <button class="btn" onclick="claimRewards()" style="width: 100%;">Claim Rewards</button>
+                    <button class="btn" onclick="withdraw()" style="width: 100%; background: linear-gradient(135deg, #ff9f43 0%, #ee5a24 100%);">Complete Withdrawal</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validators List -->
+        <div class="card">
+            <h3>Active Validators (<span id="validatorCount">0</span>)</h3>
+            <div class="validators-list" id="validatorsList">
+                <div class="validator-item">
+                    <span style="color: #888;">No validators yet</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>Activity Log</h3>
+            <div class="log-output" id="logOutput">
+                <div class="log-entry info">Welcome to Altcoinchain Dashboard</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rpcUrl = 'http://127.0.0.1:8545';
+        let connected = false;
+        let currentAccount = null;
+        let updateInterval = null;
+
+        const STAKING_CONTRACT = '0x87f0bd245507e5a94cdb03472501a9f522a9e0f1';
+        const HYBRID_FORK_BLOCK = 7000000;
+        const MIN_STAKE = 32;
+
+        // Staking contract ABI (simplified)
+        const STAKING_ABI = [
+            'function stake() payable',
+            'function requestWithdrawal(uint256 amount)',
+            'function withdraw()',
+            'function claimRewards()',
+            'function getStake(address) view returns (uint256)',
+            'function getPendingRewards(address) view returns (uint256)',
+            'function isValidator(address) view returns (bool)',
+            'function getValidators() view returns (address[])',
+            'function getValidatorCount() view returns (uint256)',
+            'function totalStaked() view returns (uint256)'
+        ];
+
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('logOutput');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        async function rpcCall(method, params = []) {
+            const response = await fetch(rpcUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: method,
+                    params: params,
+                    id: 1
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            return data.result;
+        }
+
+        async function connect() {
+            rpcUrl = document.getElementById('rpcUrl').value;
+            try {
+                const chainId = await rpcCall('eth_chainId');
+                if (parseInt(chainId, 16) !== 2330) {
+                    throw new Error('Not connected to Altcoinchain (Chain ID 2330)');
+                }
+
+                connected = true;
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').textContent = 'Connected';
+                log('Connected to Altcoinchain RPC', 'info');
+
+                // Try to get accounts
+                try {
+                    const accounts = await rpcCall('eth_accounts');
+                    if (accounts.length > 0) {
+                        currentAccount = accounts[0];
+                        log(`Account: ${currentAccount}`, 'info');
+                    }
+                } catch (e) {
+                    log('No accounts available (read-only mode)', 'info');
+                }
+
+                // Start updates
+                updateDashboard();
+                if (updateInterval) clearInterval(updateInterval);
+                updateInterval = setInterval(updateDashboard, 5000);
+
+            } catch (error) {
+                connected = false;
+                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusText').textContent = 'Error';
+                log(`Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function updateDashboard() {
+            if (!connected) return;
+
+            try {
+                // Network stats
+                const chainId = await rpcCall('eth_chainId');
+                const blockNumber = await rpcCall('eth_blockNumber');
+                const peerCount = await rpcCall('net_peerCount');
+                const syncing = await rpcCall('eth_syncing');
+                const gasPrice = await rpcCall('eth_gasPrice');
+
+                const blockNum = parseInt(blockNumber, 16);
+                const peers = parseInt(peerCount, 16);
+                const gas = parseInt(gasPrice, 16) / 1e9;
+
+                document.getElementById('chainId').textContent = parseInt(chainId, 16);
+                document.getElementById('blockNumber').textContent = blockNum.toLocaleString();
+                document.getElementById('peerCount').textContent = peers;
+                document.getElementById('syncStatus').textContent = syncing ? 'Syncing...' : 'Synced';
+                document.getElementById('gasPrice').textContent = `${gas.toFixed(2)} Gwei`;
+
+                // Fork progress
+                const blocksLeft = Math.max(0, HYBRID_FORK_BLOCK - blockNum);
+                const progress = Math.min(100, (blockNum / HYBRID_FORK_BLOCK) * 100);
+                document.getElementById('blocksUntilFork').textContent = blocksLeft.toLocaleString();
+                document.getElementById('forkProgress').style.width = `${progress}%`;
+
+                // Hybrid status
+                try {
+                    const hybridActive = await rpcCall('validator_isHybridActive');
+                    const stakingContract = await rpcCall('validator_getStakingContractAddress');
+                    document.getElementById('hybridActive').textContent = hybridActive ? 'Yes' : 'No';
+                    document.getElementById('hybridActive').style.color = hybridActive ? '#44ff44' : '#ff4444';
+                    document.getElementById('stakingContract').textContent = stakingContract;
+                } catch (e) {
+                    document.getElementById('hybridActive').textContent = 'N/A';
+                }
+
+                // Account info
+                if (currentAccount) {
+                    const balance = await rpcCall('eth_getBalance', [currentAccount, 'latest']);
+                    const balanceALT = parseInt(balance, 16) / 1e18;
+
+                    document.getElementById('accountAddress').textContent = currentAccount;
+                    document.getElementById('accountBalance').textContent = `${balanceALT.toFixed(4)} ALT`;
+
+                    // Get staking info
+                    try {
+                        const stakeData = encodeCall('getStake', currentAccount);
+                        const staked = await rpcCall('eth_call', [{to: STAKING_CONTRACT, data: stakeData}, 'latest']);
+                        const stakedALT = parseInt(staked, 16) / 1e18;
+                        document.getElementById('stakedAmount').textContent = `${stakedALT.toFixed(4)} ALT`;
+
+                        const rewardsData = encodeCall('getPendingRewards', currentAccount);
+                        const rewards = await rpcCall('eth_call', [{to: STAKING_CONTRACT, data: rewardsData}, 'latest']);
+                        const rewardsALT = parseInt(rewards, 16) / 1e18;
+                        document.getElementById('pendingRewards').textContent = `${rewardsALT.toFixed(4)} ALT`;
+
+                        const isValData = encodeCall('isValidator', currentAccount);
+                        const isVal = await rpcCall('eth_call', [{to: STAKING_CONTRACT, data: isValData}, 'latest']);
+                        const isValidator = parseInt(isVal, 16) === 1;
+                        document.getElementById('validatorStatus').textContent = isValidator ? 'Active Validator' : 'Not a Validator';
+                        document.getElementById('validatorStatus').style.color = isValidator ? '#44ff44' : '#888';
+                    } catch (e) {
+                        // Contract might not be deployed yet
+                    }
+                }
+
+                // Validators list
+                try {
+                    const countData = '0x' + keccak256('getValidatorCount()').slice(0, 8);
+                    const count = await rpcCall('eth_call', [{to: STAKING_CONTRACT, data: countData}, 'latest']);
+                    const validatorCount = parseInt(count, 16);
+                    document.getElementById('validatorCount').textContent = validatorCount;
+
+                    if (validatorCount > 0) {
+                        const validatorsData = '0x' + keccak256('getValidators()').slice(0, 8);
+                        // Note: Parsing array returns is complex, simplified here
+                    }
+                } catch (e) {
+                    // Contract might not be deployed yet
+                }
+
+            } catch (error) {
+                log(`Update error: ${error.message}`, 'error');
+            }
+        }
+
+        function encodeCall(method, address) {
+            const methodSig = keccak256(`${method}(address)`).slice(0, 8);
+            const paddedAddr = address.slice(2).padStart(64, '0');
+            return '0x' + methodSig + paddedAddr;
+        }
+
+        function keccak256(str) {
+            // Simple hash for method signatures (not cryptographically secure, just for demo)
+            // In production, use a proper keccak256 implementation
+            const hashes = {
+                'getStake(address)': 'e8e59709',
+                'getPendingRewards(address)': 'f6ed2017',
+                'isValidator(address)': 'facd743b',
+                'getValidatorCount()': '7071688a',
+                'getValidators()': 'b7ab4db5'
+            };
+            return hashes[str] || '00000000';
+        }
+
+        async function stake() {
+            if (!currentAccount) {
+                log('No account connected', 'error');
+                return;
+            }
+            const amount = parseFloat(document.getElementById('stakeAmount').value);
+            if (isNaN(amount) || amount < MIN_STAKE) {
+                log(`Minimum stake is ${MIN_STAKE} ALT`, 'error');
+                return;
+            }
+
+            try {
+                const value = '0x' + (BigInt(amount * 1e18)).toString(16);
+                const tx = {
+                    from: currentAccount,
+                    to: STAKING_CONTRACT,
+                    value: value,
+                    data: '0x3a4b66f1' // stake()
+                };
+                const txHash = await rpcCall('eth_sendTransaction', [tx]);
+                log(`Stake transaction sent: ${txHash}`, 'info');
+            } catch (error) {
+                log(`Stake failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function requestWithdrawal() {
+            if (!currentAccount) {
+                log('No account connected', 'error');
+                return;
+            }
+            const amount = parseFloat(document.getElementById('unstakeAmount').value);
+            if (isNaN(amount) || amount <= 0) {
+                log('Enter a valid amount', 'error');
+                return;
+            }
+
+            try {
+                const amountWei = (BigInt(amount * 1e18)).toString(16).padStart(64, '0');
+                const tx = {
+                    from: currentAccount,
+                    to: STAKING_CONTRACT,
+                    data: '0x9ee679e8' + amountWei // requestWithdrawal(uint256)
+                };
+                const txHash = await rpcCall('eth_sendTransaction', [tx]);
+                log(`Withdrawal request sent: ${txHash}`, 'info');
+            } catch (error) {
+                log(`Withdrawal request failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function claimRewards() {
+            if (!currentAccount) {
+                log('No account connected', 'error');
+                return;
+            }
+
+            try {
+                const tx = {
+                    from: currentAccount,
+                    to: STAKING_CONTRACT,
+                    data: '0x372500ab' // claimRewards()
+                };
+                const txHash = await rpcCall('eth_sendTransaction', [tx]);
+                log(`Claim rewards transaction sent: ${txHash}`, 'info');
+            } catch (error) {
+                log(`Claim failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function withdraw() {
+            if (!currentAccount) {
+                log('No account connected', 'error');
+                return;
+            }
+
+            try {
+                const tx = {
+                    from: currentAccount,
+                    to: STAKING_CONTRACT,
+                    data: '0x3ccfd60b' // withdraw()
+                };
+                const txHash = await rpcCall('eth_sendTransaction', [tx]);
+                log(`Withdraw transaction sent: ${txHash}`, 'info');
+            } catch (error) {
+                log(`Withdraw failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-connect on load
+        window.onload = () => {
+            connect();
+        };
+    </script>
+</body>
+</html>
